@@ -1040,6 +1040,8 @@ int main(void) {
     keyboard_setup();
     setup_usb();
     sei();
+    web_usb_task();
+
 
 #if defined(MODULE_ADAFRUIT_EZKEY) || defined(MODULE_RN42)
     serial_init();
