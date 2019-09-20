@@ -44,7 +44,7 @@
 #define _DESCRIPTORS_H_
 
 #include <LUFA/Drivers/USB/USB.h>
-
+#include "webusb.h"
 #ifdef PROTOCOL_CHIBIOS
 #    include "hal.h"
 #endif
@@ -91,6 +91,9 @@ typedef struct {
     USB_Descriptor_Endpoint_t  Console_INEndpoint;
     USB_Descriptor_Endpoint_t  Console_OUTEndpoint;
 #endif
+    USB_Descriptor_Interface_t            WebUSB_Interface;
+    USB_Descriptor_Endpoint_t             WebUSB_DataInEndpoint;
+    USB_Descriptor_Endpoint_t             WebUSB_DataOutEndpoint;
 
 #ifdef MIDI_ENABLE
     USB_Descriptor_Interface_Association_t Audio_Interface_Association;
@@ -164,6 +167,8 @@ enum usb_interfaces {
     CDI_INTERFACE,
 #endif
 
+    INTERFACE_ID_WebUSB,
+
     TOTAL_INTERFACES
 };
 
@@ -216,6 +221,11 @@ enum usb_endpoints {
 #    define MIDI_STREAM_OUT_EPADDR (ENDPOINT_DIR_OUT | MIDI_STREAM_OUT_EPNUM)
 #endif
 
+    WEBUSB_IN_EPNUM  = NEXT_EPNUM,
+    WEBUSB_OUT_EPNUM = NEXT_EPNUM,
+#define WEBUSB_IN_EPADDR         (ENDPOINT_DIR_IN  | WEBUSB_IN_EPNUM)
+#define WEBUSB_OUT_EPADDR        (ENDPOINT_DIR_OUT | WEBUSB_OUT_EPNUM)
+
 #ifdef VIRTSER_ENABLE
     CDC_NOTIFICATION_EPNUM = NEXT_EPNUM,
     CDC_IN_EPNUM           = NEXT_EPNUM,
@@ -248,6 +258,9 @@ enum usb_endpoints {
 #define MIDI_STREAM_EPSIZE 64
 #define CDC_NOTIFICATION_EPSIZE 8
 #define CDC_EPSIZE 16
+#define WEBUSB_IO_EPSIZE            8
+
+
 
 uint16_t get_usb_descriptor(const uint16_t wValue, const uint16_t wIndex, const void** const DescriptorAddress);
 #endif

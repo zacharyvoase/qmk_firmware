@@ -50,6 +50,7 @@
 #include "suspend.h"
 
 #include "usb_descriptor.h"
+#include "webusb.h"
 #include "lufa.h"
 #include "quantum.h"
 #include <util/atomic.h>
@@ -268,6 +269,54 @@ static void Console_Task(void) {
 }
 #endif
 
+void web_usb_task(void) {
+    uint8_t ReceivedData[WEBUSB_IO_EPSIZE];
+    memset(ReceivedData, 0x00, sizeof(ReceivedData));
+
+    Endpoint_SelectEndpoint(WEBUSB_OUT_EPADDR);
+    if (Endpoint_IsOUTReceived()) {
+        Endpoint_Read_Stream_LE(ReceivedData, WEBUSB_IO_EPSIZE, NULL);
+        Endpoint_ClearOUT();
+
+        Endpoint_SelectEndpoint(WEBUSB_IN_EPADDR);
+        Endpoint_Write_Stream_LE(ReceivedData, WEBUSB_IO_EPSIZE, NULL);
+        Endpoint_ClearIN();
+    }
+}
+
+/** Microsoft OS 2.0 Descriptor. This is used by Windows to select the USB driver for the device.
+ *
+ *  For WebUSB in Chrome, the correct driver is WinUSB, which is selected via CompatibleID.
+ *
+ *  Additionally, while Chrome is built using libusb, a magic registry key needs to be set containing a GUID for
+ *  the device.
+ */
+const MS_OS_20_Descriptor_t PROGMEM MS_OS_20_Descriptor =
+{
+	.Header =
+		{
+			.Length = CPU_TO_LE16(10),
+			.DescriptorType = CPU_TO_LE16(MS_OS_20_SET_HEADER_DESCRIPTOR),
+			.WindowsVersion = MS_OS_20_WINDOWS_VERSION_8_1,
+			.TotalLength = CPU_TO_LE16(MS_OS_20_DESCRIPTOR_SET_TOTAL_LENGTH)
+		},
+
+	.CompatibleID =
+		{
+			.Length = CPU_TO_LE16(20),
+			.DescriptorType = CPU_TO_LE16(MS_OS_20_FEATURE_COMPATBLE_ID),
+			.CompatibleID = u8"WINUSB\x00", // Automatically null-terminated to 8 bytes
+			.SubCompatibleID = {0, 0, 0, 0, 0, 0, 0, 0}
+		}
+};
+
+/** URL descriptor string. This is a UTF-8 string containing a URL excluding the prefix. At least one of these must be
+ * 	defined and returned when the Landing Page descriptor index is requested.
+ */
+const WebUSB_URL_Descriptor_t PROGMEM WebUSB_LandingPage = WEBUSB_URL_DESCRIPTOR(1, u8"www.ergodox-ez.com");
+
+
+
 /*******************************************************************************
  * USB Events
  ******************************************************************************/
@@ -405,6 +454,9 @@ void EVENT_USB_Device_ConfigurationChanged(void) {
 #    endif
 #endif
 
+	ConfigSuccess &= Endpoint_ConfigureEndpoint(WEBUSB_IN_EPADDR, EP_TYPE_INTERRUPT, WEBUSB_IO_EPSIZE, 1);
+	ConfigSuccess &= Endpoint_ConfigureEndpoint(WEBUSB_OUT_EPADDR, EP_TYPE_INTERRUPT, WEBUSB_IO_EPSIZE, 1);
+
 #ifdef MIDI_ENABLE
     ConfigSuccess &= Endpoint_ConfigureEndpoint(MIDI_STREAM_IN_EPADDR, EP_TYPE_BULK, MIDI_STREAM_EPSIZE, ENDPOINT_BANK_SINGLE);
     ConfigSuccess &= Endpoint_ConfigureEndpoint(MIDI_STREAM_OUT_EPADDR, EP_TYPE_BULK, MIDI_STREAM_EPSIZE, ENDPOINT_BANK_SINGLE);
@@ -536,6 +588,41 @@ void EVENT_USB_Device_ControlRequest(void) {
             }
 
             break;
+        case WEBUSB_VENDOR_CODE:
+          switch (USB_ControlRequest.wIndex) {
+            case WebUSB_RTYPE_GetURL:
+              switch (USB_ControlRequest.wValue) {
+                case WEBUSB_LANDING_PAGE_INDEX:
+                  Endpoint_ClearSETUP();
+                  /* Write the descriptor data to the control endpoint */
+                  Endpoint_Write_Control_PStream_LE(&WebUSB_LandingPage, WebUSB_LandingPage.Header.Size);
+                  /* Release the endpoint after transaction. */
+                  Endpoint_ClearStatusStage();
+                  break;
+                default: /* Stall transfer on invalid index. */
+                  Endpoint_StallTransaction();
+                  break;
+              }
+              break;
+            default: /* Stall on unknown WebUSB request */
+              Endpoint_StallTransaction();
+              break;
+          }
+          break;
+        case MS_OS_20_VENDOR_CODE:
+          switch (USB_ControlRequest.wIndex) {
+            case MS_OS_20_DESCRIPTOR_INDEX:
+              Endpoint_ClearSETUP();
+              /* Write the descriptor data to the control endpoint */
+              Endpoint_Write_Control_PStream_LE(&MS_OS_20_Descriptor, MS_OS_20_Descriptor.Header.TotalLength);
+              /* Release the endpoint after transaction. */
+              Endpoint_ClearStatusStage();
+              break;
+            default: /* Stall on unknown MS OS 2.0 request */
+              Endpoint_StallTransaction();
+              break;
+          }
+          break;
     }
 
 #ifdef VIRTSER_ENABLE

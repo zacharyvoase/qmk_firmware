@@ -274,11 +274,17 @@ const USB_Descriptor_HIDReport_Datatype_t PROGMEM ConsoleReport[] = {
 };
 #endif
 
+const USB_Descriptor_BOS_t PROGMEM BOSDescriptor = BOS_DESCRIPTOR(
+		(MS_OS_20_PLATFORM_DESCRIPTOR(MS_OS_20_VENDOR_CODE, MS_OS_20_DESCRIPTOR_SET_TOTAL_LENGTH))
+		(WEBUSB_PLATFORM_DESCRIPTOR(WEBUSB_VENDOR_CODE, WEBUSB_LANDING_PAGE_INDEX))
+);
+
+
 /*
  * Device descriptor
  */
 const USB_Descriptor_Device_t PROGMEM DeviceDescriptor = {.Header           = {.Size = sizeof(USB_Descriptor_Device_t), .Type = DTYPE_Device},
-                                                          .USBSpecification = VERSION_BCD(1, 1, 0),
+                                                          .USBSpecification = VERSION_BCD(2, 0, 0),
 #if VIRTSER_ENABLE
                                                           .Class    = USB_CSCP_IADDeviceClass,
                                                           .SubClass = USB_CSCP_IADDeviceSubclass,
@@ -377,11 +383,38 @@ const USB_Descriptor_Configuration_t PROGMEM
             .Console_OUTEndpoint = {.Header = {.Size = sizeof(USB_Descriptor_Endpoint_t), .Type = DTYPE_Endpoint}, .EndpointAddress = (ENDPOINT_DIR_OUT | CONSOLE_OUT_EPNUM), .Attributes = (EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA), .EndpointSize = CONSOLE_EPSIZE, .PollingIntervalMS = 0x01},
 #endif
 
+            .WebUSB_Interface = {.Header = {.Size = sizeof(USB_Descriptor_Interface_t), .Type = DTYPE_Interface},
+
+                                 .InterfaceNumber  = INTERFACE_ID_WebUSB,
+                                 .AlternateSetting = 0x00,
+
+                                 .TotalEndpoints = 2,
+
+                                 .Class    = USB_CSCP_VendorSpecificClass,
+                                 .SubClass = USB_CSCP_VendorSpecificSubclass,
+                                 .Protocol = USB_CSCP_VendorSpecificProtocol,
+
+                                 .InterfaceStrIndex = NO_DESCRIPTOR},
+
+            .WebUSB_DataInEndpoint = {.Header = {.Size = sizeof(USB_Descriptor_Endpoint_t), .Type = DTYPE_Endpoint},
+
+                                      .EndpointAddress   = WEBUSB_IN_EPADDR,
+                                      .Attributes        = (EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
+                                      .EndpointSize      = WEBUSB_IO_EPSIZE,
+                                      .PollingIntervalMS = 0x05},
+
+            .WebUSB_DataOutEndpoint = {.Header = {.Size = sizeof(USB_Descriptor_Endpoint_t), .Type = DTYPE_Endpoint},
+
+                                       .EndpointAddress   = WEBUSB_OUT_EPADDR,
+                                       .Attributes        = (EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
+                                       .EndpointSize      = WEBUSB_IO_EPSIZE,
+                                       .PollingIntervalMS = 0x05}
+
 #ifdef MIDI_ENABLE
-            /*
-             * MIDI
-             */
-            .Audio_Interface_Association =
+                                          /*
+                                           * MIDI
+                                           */
+                                          .Audio_Interface_Association =
                 {
                     .Header              = {.Size = sizeof(USB_Descriptor_Interface_Association_t), .Type = DTYPE_InterfaceAssociation},
                     .FirstInterfaceIndex = AC_INTERFACE,
@@ -516,6 +549,11 @@ uint16_t get_usb_descriptor(const uint16_t wValue, const uint16_t wIndex, const 
             Size    = sizeof(USB_Descriptor_Device_t);
 
             break;
+		case DTYPE_BOS:
+			Address = &BOSDescriptor;
+			Size = sizeof(USB_Descriptor_BOS_t);
+			break;
+
         case DTYPE_Configuration:
             Address = &ConfigurationDescriptor;
             Size    = sizeof(USB_Descriptor_Configuration_t);
