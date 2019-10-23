@@ -31,6 +31,10 @@
 #include "usb_descriptor.h"
 #include "usb_driver.h"
 
+#ifdef WEBUSB_ENABLE
+#include "webusb.h"
+#endif
+
 #ifdef NKRO_ENABLE
 #    include "keycode_config.h"
 
@@ -151,6 +155,30 @@ static const USBEndpointConfig shared_ep_config = {
 };
 #endif
 
+#ifdef WEBUSB_ENABLE
+const WebUSB_URL_Descriptor_t PROGMEM WebUSB_LandingPage = WEBUSB_URL_DESCRIPTOR(1, u8"www.ergodox-ez.com");
+
+const MS_OS_20_Descriptor_t PROGMEM MS_OS_20_Descriptor =
+{
+	.Header =
+		{
+			.Length = CPU_TO_LE16(10),
+			.DescriptorType = CPU_TO_LE16(MS_OS_20_SET_HEADER_DESCRIPTOR),
+			.WindowsVersion = MS_OS_20_WINDOWS_VERSION_8_1,
+			.TotalLength = CPU_TO_LE16(MS_OS_20_DESCRIPTOR_SET_TOTAL_LENGTH)
+		},
+
+	.CompatibleID =
+		{
+			.Length = CPU_TO_LE16(20),
+			.DescriptorType = CPU_TO_LE16(MS_OS_20_FEATURE_COMPATBLE_ID),
+			.CompatibleID = u8"WINUSB\x00", // Automatically null-terminated to 8 bytes
+			.SubCompatibleID = {0, 0, 0, 0, 0, 0, 0, 0}
+		}
+};
+#endif
+
+
 typedef struct {
     size_t              queue_capacity_in;
     size_t              queue_capacity_out;
@@ -233,6 +261,9 @@ typedef struct {
 #ifdef VIRTSER_ENABLE
             usb_driver_config_t serial_driver;
 #endif
+#ifdef WEBUSB_ENABLE
+            usb_driver_config_t webusb_driver;
+#endif
         };
         usb_driver_config_t array[0];
     };
@@ -268,6 +299,14 @@ static usb_driver_configs_t drivers = {
 #    define CDC_IN_MODE USB_EP_MODE_TYPE_BULK
 #    define CDC_OUT_MODE USB_EP_MODE_TYPE_BULK
     .serial_driver = QMK_USB_DRIVER_CONFIG(CDC, CDC_NOTIFICATION_EPNUM, false),
+#endif
+
+#ifdef WEBUSB_ENABLE
+#    define WEBUSB_IN_CAPACITY 4
+#    define WEBUSB_OUT_CAPACITY 4
+#    define WEBUSB_IN_MODE USB_EP_MODE_TYPE_INTR
+#    define WEBUSB_OUT_MODE USB_EP_MODE_TYPE_INTR
+    .webusb_driver = QMK_USB_DRIVER_CONFIG(WEBUSB, 0, false),
 #endif
 };
 
@@ -491,6 +530,25 @@ static bool usb_request_hook_cb(USBDriver *usbp) {
                         usbSetupTransfer(usbp, NULL, 0, NULL);
                         return TRUE;
                         break;
+#ifdef WEBUSB_ENABLE
+                    case WEBUSB_VENDOR_CODE:
+                      if (usbp->setup[4] == WebUSB_RTYPE_GetURL) {
+                          if (usbp->setup[5] == WEBUSB_LANDING_PAGE_INDEX) {
+                              usbSetupTransfer(usbp, (uint8_t *)&WebUSB_LandingPage, WebUSB_LandingPage.Header.Size, NULL);
+                              return TRUE;
+                              break;
+                          }
+                      }
+                      break;
+
+                    case MS_OS_20_VENDOR_CODE:
+                      if (usbp->setup[4] == MS_OS_20_DESCRIPTOR_INDEX) {
+                              usbSetupTransfer(usbp, (uint8_t *)&MS_OS_20_Descriptor, MS_OS_20_Descriptor.Header.TotalLength, NULL);
+                              return TRUE;
+                              break;
+                      }
+                      break;
+#endif
                 }
                 break;
         }
@@ -816,6 +874,31 @@ void raw_hid_task(void) {
 }
 
 #endif
+
+#ifdef WEBUSB_ENABLE
+void webusb_send(uint8_t *data, uint8_t length) {
+    chnWrite(&drivers.webusb_driver.driver, data, length);
+}
+
+__attribute__((weak)) void webusb_receive(uint8_t *data, uint8_t length) {
+    // Users should #include "raw_hid.h" in their own code
+    // and implement this function there. Leave this as weak linkage
+    // so users can opt to not handle data coming in.
+}
+
+void webusb_task(void) {
+    uint8_t buffer[WEBUSB_EPSIZE];
+    size_t  size = 0;
+    do {
+        size_t size = chnReadTimeout(&drivers.webusb_driver.driver, buffer, sizeof(buffer), TIME_IMMEDIATE);
+        if (size > 0) {
+            webusb_receive(buffer, size);
+        }
+    } while (size > 0);
+}
+
+#endif
+
 
 #ifdef MIDI_ENABLE
 

@@ -1,5 +1,9 @@
 #pragma once
 
+void webusb_receive(uint8_t *data, uint8_t length);
+
+void webusb_send(uint8_t *data, uint8_t length);
+
 		#ifndef WORD_TO_BYTES_LE
 		#define WORD_TO_BYTES_LE(n) n % 256, (n / 256) % 256
 		#endif

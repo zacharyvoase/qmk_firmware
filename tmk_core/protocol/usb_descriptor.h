@@ -44,7 +44,9 @@
 #define _DESCRIPTORS_H_
 
 #include <LUFA/Drivers/USB/USB.h>
+#ifdef WEBUSB_ENABLE
 #include "webusb.h"
+#endif
 #ifdef PROTOCOL_CHIBIOS
 #    include "hal.h"
 #endif
@@ -167,7 +169,9 @@ enum usb_interfaces {
     CDI_INTERFACE,
 #endif
 
+#ifdef WEBUSB_ENABLE
     INTERFACE_ID_WebUSB,
+#endif
 
     TOTAL_INTERFACES
 };
@@ -221,10 +225,12 @@ enum usb_endpoints {
 #    define MIDI_STREAM_OUT_EPADDR (ENDPOINT_DIR_OUT | MIDI_STREAM_OUT_EPNUM)
 #endif
 
+#ifdef WEBUSB_ENABLE 
     WEBUSB_IN_EPNUM  = NEXT_EPNUM,
     WEBUSB_OUT_EPNUM = NEXT_EPNUM,
-#define WEBUSB_IN_EPADDR         (ENDPOINT_DIR_IN  | WEBUSB_IN_EPNUM)
-#define WEBUSB_OUT_EPADDR        (ENDPOINT_DIR_OUT | WEBUSB_OUT_EPNUM)
+#    define WEBUSB_IN_EPADDR         (ENDPOINT_DIR_IN  | WEBUSB_IN_EPNUM)
+#    define WEBUSB_OUT_EPADDR        (ENDPOINT_DIR_OUT | WEBUSB_OUT_EPNUM)
+#endif
 
 #ifdef VIRTSER_ENABLE
     CDC_NOTIFICATION_EPNUM = NEXT_EPNUM,
@@ -258,7 +264,7 @@ enum usb_endpoints {
 #define MIDI_STREAM_EPSIZE 64
 #define CDC_NOTIFICATION_EPSIZE 8
 #define CDC_EPSIZE 16
-#define WEBUSB_IO_EPSIZE            8
+#define WEBUSB_EPSIZE 64
 
 
 

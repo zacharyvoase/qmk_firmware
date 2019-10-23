@@ -39,6 +39,7 @@
 #include "util.h"
 #include "report.h"
 #include "usb_descriptor.h"
+#include "print.h"
 
 /*
  * HID report descriptors
@@ -383,6 +384,10 @@ const USB_Descriptor_Configuration_t PROGMEM
             .Console_OUTEndpoint = {.Header = {.Size = sizeof(USB_Descriptor_Endpoint_t), .Type = DTYPE_Endpoint}, .EndpointAddress = (ENDPOINT_DIR_OUT | CONSOLE_OUT_EPNUM), .Attributes = (EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA), .EndpointSize = CONSOLE_EPSIZE, .PollingIntervalMS = 0x01},
 #endif
 
+#ifdef WEBUSB_ENABLE
+            /*
+             * Webusb
+             */
             .WebUSB_Interface = {.Header = {.Size = sizeof(USB_Descriptor_Interface_t), .Type = DTYPE_Interface},
 
                                  .InterfaceNumber  = INTERFACE_ID_WebUSB,
@@ -391,8 +396,8 @@ const USB_Descriptor_Configuration_t PROGMEM
                                  .TotalEndpoints = 2,
 
                                  .Class    = USB_CSCP_VendorSpecificClass,
-                                 .SubClass = USB_CSCP_VendorSpecificSubclass,
-                                 .Protocol = USB_CSCP_VendorSpecificProtocol,
+                                 .SubClass = 0x00,
+                                 .Protocol = 0x00,
 
                                  .InterfaceStrIndex = NO_DESCRIPTOR},
 
@@ -400,15 +405,16 @@ const USB_Descriptor_Configuration_t PROGMEM
 
                                       .EndpointAddress   = WEBUSB_IN_EPADDR,
                                       .Attributes        = (EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
-                                      .EndpointSize      = WEBUSB_IO_EPSIZE,
+                                      .EndpointSize      = WEBUSB_EPSIZE,
                                       .PollingIntervalMS = 0x05},
 
             .WebUSB_DataOutEndpoint = {.Header = {.Size = sizeof(USB_Descriptor_Endpoint_t), .Type = DTYPE_Endpoint},
 
                                        .EndpointAddress   = WEBUSB_OUT_EPADDR,
                                        .Attributes        = (EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
-                                       .EndpointSize      = WEBUSB_IO_EPSIZE,
+                                       .EndpointSize      = WEBUSB_EPSIZE,
                                        .PollingIntervalMS = 0x05},
+#endif
 
 #ifdef MIDI_ENABLE
             /*
@@ -551,7 +557,7 @@ uint16_t get_usb_descriptor(const uint16_t wValue, const uint16_t wIndex, const 
             break;
 		case DTYPE_BOS:
 			Address = &BOSDescriptor;
-			Size = sizeof(USB_Descriptor_BOS_t);
+			Size = pgm_read_byte(&BOSDescriptor.TotalLength);
 			break;
 
         case DTYPE_Configuration:

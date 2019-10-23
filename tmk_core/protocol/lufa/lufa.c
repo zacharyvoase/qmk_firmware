@@ -50,7 +50,6 @@
 #include "suspend.h"
 
 #include "usb_descriptor.h"
-#include "webusb.h"
 #include "lufa.h"
 #include "quantum.h"
 #include <util/atomic.h>
@@ -269,17 +268,23 @@ static void Console_Task(void) {
 }
 #endif
 
-void web_usb_task(void) {
-    uint8_t ReceivedData[WEBUSB_IO_EPSIZE];
+#ifdef WEBUSB_ENABLE
+__attribute__((weak)) void webusb_receive(uint8_t *data, uint8_t length) { }
+
+void webusb_task(void) {
+    uint8_t ReceivedData[WEBUSB_EPSIZE];
     memset(ReceivedData, 0x00, sizeof(ReceivedData));
+    dprint("OUT");
 
     Endpoint_SelectEndpoint(WEBUSB_OUT_EPADDR);
     if (Endpoint_IsOUTReceived()) {
-        Endpoint_Read_Stream_LE(ReceivedData, WEBUSB_IO_EPSIZE, NULL);
+        Endpoint_Read_Stream_LE(ReceivedData, WEBUSB_EPSIZE, NULL);
         Endpoint_ClearOUT();
 
+        webusb_receive(ReceivedData, sizeof(ReceivedData));
+
         Endpoint_SelectEndpoint(WEBUSB_IN_EPADDR);
-        Endpoint_Write_Stream_LE(ReceivedData, WEBUSB_IO_EPSIZE, NULL);
+        Endpoint_Write_Stream_LE(ReceivedData, WEBUSB_EPSIZE, NULL);
         Endpoint_ClearIN();
     }
 }
@@ -314,7 +319,7 @@ const MS_OS_20_Descriptor_t PROGMEM MS_OS_20_Descriptor =
  * 	defined and returned when the Landing Page descriptor index is requested.
  */
 const WebUSB_URL_Descriptor_t PROGMEM WebUSB_LandingPage = WEBUSB_URL_DESCRIPTOR(1, u8"www.ergodox-ez.com");
-
+#endif
 
 
 /*******************************************************************************
@@ -454,8 +459,8 @@ void EVENT_USB_Device_ConfigurationChanged(void) {
 #    endif
 #endif
 
-	ConfigSuccess &= Endpoint_ConfigureEndpoint(WEBUSB_IN_EPADDR, EP_TYPE_INTERRUPT, WEBUSB_IO_EPSIZE, 1);
-	ConfigSuccess &= Endpoint_ConfigureEndpoint(WEBUSB_OUT_EPADDR, EP_TYPE_INTERRUPT, WEBUSB_IO_EPSIZE, 1);
+	ConfigSuccess &= Endpoint_ConfigureEndpoint(WEBUSB_IN_EPADDR, EP_TYPE_INTERRUPT, WEBUSB_EPSIZE, 1);
+	ConfigSuccess &= Endpoint_ConfigureEndpoint(WEBUSB_OUT_EPADDR, EP_TYPE_INTERRUPT, WEBUSB_EPSIZE, 1);
 
 #ifdef MIDI_ENABLE
     ConfigSuccess &= Endpoint_ConfigureEndpoint(MIDI_STREAM_IN_EPADDR, EP_TYPE_BULK, MIDI_STREAM_EPSIZE, ENDPOINT_BANK_SINGLE);
@@ -1040,7 +1045,10 @@ int main(void) {
     keyboard_setup();
     setup_usb();
     sei();
-    web_usb_task();
+
+#ifdef WEBUSB_ENABLE
+    webusb_task();
+#endif
 
 
 #if defined(MODULE_ADAFRUIT_EZKEY) || defined(MODULE_RN42)
