@@ -285,7 +285,7 @@ const USB_Descriptor_BOS_t PROGMEM BOSDescriptor = BOS_DESCRIPTOR(
  * Device descriptor
  */
 const USB_Descriptor_Device_t PROGMEM DeviceDescriptor = {.Header           = {.Size = sizeof(USB_Descriptor_Device_t), .Type = DTYPE_Device},
-                                                          .USBSpecification = VERSION_BCD(2, 0, 0),
+                                                          .USBSpecification = VERSION_BCD(2, 1, 0),
 #if VIRTSER_ENABLE
                                                           .Class    = USB_CSCP_IADDeviceClass,
                                                           .SubClass = USB_CSCP_IADDeviceSubclass,
