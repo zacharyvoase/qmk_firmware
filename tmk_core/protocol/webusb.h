@@ -13,7 +13,7 @@ void webusb_send(uint8_t *data, uint8_t length);
 
 
 #define WEBUSB_VENDOR_CODE 0x42
-#define WEBUSB_LANDING_PAGE_INDEX 0
+#define WEBUSB_LANDING_PAGE_INDEX 1
 
 #define WEBUSB_VERSION VERSION_BCD(1, 0, 0)
 
