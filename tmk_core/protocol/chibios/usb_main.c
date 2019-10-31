@@ -156,7 +156,7 @@ static const USBEndpointConfig shared_ep_config = {
 #endif
 
 #ifdef WEBUSB_ENABLE
-const WebUSB_URL_Descriptor_t PROGMEM WebUSB_LandingPage = WEBUSB_URL_DESCRIPTOR(1, u8"www.ergodox-ez.com");
+const WebUSB_URL_Descriptor_t PROGMEM WebUSB_LandingPage = WEBUSB_URL_DESCRIPTOR(WEBUSB_LANDING_PAGE_URL);
 
 const MS_OS_20_Descriptor_t PROGMEM MS_OS_20_Descriptor =
 {
@@ -530,10 +530,16 @@ static bool usb_request_hook_cb(USBDriver *usbp) {
                         usbSetupTransfer(usbp, NULL, 0, NULL);
                         return TRUE;
                         break;
+                }
+                break;
+        }
+    }
+
 #ifdef WEBUSB_ENABLE
+                switch(usbp->setup[1]) {
                     case WEBUSB_VENDOR_CODE:
                       if (usbp->setup[4] == WebUSB_RTYPE_GetURL) {
-                          if (usbp->setup[5] == WEBUSB_LANDING_PAGE_INDEX) {
+                          if (usbp->setup[2] == WEBUSB_LANDING_PAGE_INDEX) {
                               usbSetupTransfer(usbp, (uint8_t *)&WebUSB_LandingPage, WebUSB_LandingPage.Header.Size, NULL);
                               return TRUE;
                               break;
@@ -548,11 +554,8 @@ static bool usb_request_hook_cb(USBDriver *usbp) {
                               break;
                       }
                       break;
-#endif
                 }
-                break;
-        }
-    }
+#endif
 
     /* Handle the Get_Descriptor Request for HID class (not handled by the default hook) */
     if ((usbp->setup[0] == 0x81) && (usbp->setup[1] == USB_REQ_GET_DESCRIPTOR)) {

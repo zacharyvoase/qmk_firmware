@@ -318,7 +318,7 @@ const MS_OS_20_Descriptor_t PROGMEM MS_OS_20_Descriptor =
 /** URL descriptor string. This is a UTF-8 string containing a URL excluding the prefix. At least one of these must be
  * 	defined and returned when the Landing Page descriptor index is requested.
  */
-const WebUSB_URL_Descriptor_t PROGMEM WebUSB_LandingPage = WEBUSB_URL_DESCRIPTOR(1, u8"www.ergodox-ez.com");
+const WebUSB_URL_Descriptor_t PROGMEM WebUSB_LandingPage = WEBUSB_URL_DESCRIPTOR(WEBUSB_LANDING_PAGE_URL);
 #endif
 
 

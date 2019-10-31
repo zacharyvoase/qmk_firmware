@@ -29,6 +29,7 @@
 /* key matrix size */
 #define MATRIX_ROWS 8
 #define MATRIX_COLS 6
+#define WEBUSB_LANDING_PAGE_URL u8"configure.ergodox-ez.com"
 
 /*
  * Keyboard Matrix Assignments

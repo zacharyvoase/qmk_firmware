@@ -13,6 +13,13 @@ void webusb_send(uint8_t *data, uint8_t length);
 
 
 #define WEBUSB_VENDOR_CODE 0x42
+
+#ifndef WEBUSB_LANDING_PAGE_URL
+#define WEBUSB_LANDING_PAGE_URL u8"docs.qmk.fm"
+#endif
+
+#define WEBUSB_LANDING_PAGE_PROTOCOL 1 /* 0: http  1: https forced to 1 since https is a requirement to connect over webusb */
+
 #define WEBUSB_LANDING_PAGE_INDEX 1
 
 #define WEBUSB_VERSION VERSION_BCD(1, 0, 0)
@@ -35,14 +42,12 @@ void webusb_send(uint8_t *data, uint8_t length);
  *
  *  \note This macro is for little-endian systems only.
  *
- * 	\param[in] Prefix  0 for "http://", 1 for "https://", 255 for included in the URL string.
- *
  *  \param[in] URL  URL string to initialize a URL Descriptor structure with.
  *
  * 	\note Prefix String literal with u8 to ensure proper conversion: e.g. WEBUSB_URL_DESCRIPTOR(u8"www.google.com")
  */
-#define WEBUSB_URL_DESCRIPTOR(Prefix, URL) \
-  { .Header = {.Size = sizeof(WebUSB_URL_Descriptor_t) + (sizeof(URL) - 1), .Type = WebUSB_DTYPE_URL}, .Scheme = (Prefix), .UTF8_URL = (URL) }
+#define WEBUSB_URL_DESCRIPTOR(URL) \
+  { .Header = {.Size = sizeof(WebUSB_URL_Descriptor_t) + (sizeof(URL) - 1), .Type = WebUSB_DTYPE_URL}, .Scheme = (WEBUSB_LANDING_PAGE_PROTOCOL), .UTF8_URL = (URL) }
 
 /* WebUSB Protocol Data Structures */
 enum WebUSB_Request_t {
