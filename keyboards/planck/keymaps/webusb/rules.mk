@@ -1,0 +1,4 @@
+SRC += muse.c
+RGB_MATRIX_ENABLE = no
+WEBUSB_ENABLE = yes
+CONSOLE_ENABLE = true
