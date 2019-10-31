@@ -4,18 +4,17 @@ void webusb_receive(uint8_t *data, uint8_t length);
 
 void webusb_send(uint8_t *data, uint8_t length);
 
-		#ifndef WORD_TO_BYTES_LE
-		#define WORD_TO_BYTES_LE(n) n % 256, (n / 256) % 256
-		#endif
-		#ifndef LONG_TO_BYTES_LE
-		#define LONG_TO_BYTES_LE(n) n % 256, (n / 256) % 256, (n / 65536) % 256, (n / 16777216) % 256
-		#endif
-
+#ifndef WORD_TO_BYTES_LE
+#  define WORD_TO_BYTES_LE(n) n % 256, (n / 256) % 256
+#endif
+#ifndef LONG_TO_BYTES_LE
+#  define LONG_TO_BYTES_LE(n) n % 256, (n / 256) % 256, (n / 65536) % 256, (n / 16777216) % 256
+#endif
 
 #define WEBUSB_VENDOR_CODE 0x42
 
 #ifndef WEBUSB_LANDING_PAGE_URL
-#define WEBUSB_LANDING_PAGE_URL u8"docs.qmk.fm"
+#  define WEBUSB_LANDING_PAGE_URL u8"docs.qmk.fm"
 #endif
 
 #define WEBUSB_LANDING_PAGE_PROTOCOL 1 /* 0: http  1: https forced to 1 since https is a requirement to connect over webusb */
@@ -72,8 +71,19 @@ typedef struct {
   uint8_t UTF8_URL[]; /**< UTF-8 encoded URL (excluding scheme prefix). */
 } ATTR_PACKED WebUSB_URL_Descriptor_t;
 
-#define MS_OS_20_VENDOR_CODE 0x45                       // Must be different than WEBUSB_VENDOR_CODE
-#define MS_OS_20_DESCRIPTOR_SET_TOTAL_LENGTH (10 + 20)  // Sum of `.Length`s in MS_OS_20_Descriptor in WebUSB.c
+#define MS_OS_20_VENDOR_CODE 0x45  // Must be different than WEBUSB_VENDOR_CODE
+
+#define MS_OS_20_DESCRIPTOR_CONFIGURATION_HEADER_LENGTH 168
+#define MS_OS_20_DESCRIPTOR_FUNCTION_HEADER_LENGTH 160
+#define MS_OS_20_DESCRIPTOR_SET_TOTAL_LENGTH 178  // Sum of `.Length`s in MS_OS_20_Descriptor in WebUSB.c
+
+#define MS_OS_20_DESCRIPTOR_COMPATIBILITY_ID u8"WINUSB\0"
+#define MS_OS_20_DESCRIPTOR_SUB_COMPATIBILITY_ID {0, 0, 0, 0, 0, 0, 0, 0}
+
+#define MS_OS_20_PROPERTY_NAME_LENGTH 42
+#define MS_OS_20_PROPERTY_NAME u8"DeviceInterfaceGUIDs\0"
+#define MS_OS_20_PROPERTY_DATA_LENGTH 80
+#define MS_OS_20_PROPERTY_DATA u8"{9D32F82C-1FB2-4486-8501-B6145B5BA336}\0\0"
 
 #define MS_OS_20_PLATFORM_UUID 0xdf, 0x60, 0xdd, 0xd8, 0x89, 0x45, 0xc7, 0x4c, 0x9c, 0xd2, 0x65, 0x9d, 0x9e, 0x64, 0x8a, 0x9f
 
@@ -93,11 +103,11 @@ typedef struct {
  */
 #define MS_OS_20_PLATFORM_DESCRIPTOR(VendorCode, TotalLength) /* Total size of this descriptor */ 28, DTYPE_DeviceCapability, DCTYPE_Platform, /* Reserved */ 0, MS_OS_20_PLATFORM_UUID, LONG_TO_BYTES_LE(MS_OS_20_WINDOWS_VERSION_8_1), WORD_TO_BYTES_LE(TotalLength), VendorCode, MS_OS_20_ALTERNATE_ENUMERATION_CODE
 
-/* MS OS 2.0 Descriptors Data Structures */
-enum MS_OS_20_wIndex_t {
-  MS_OS_20_DESCRIPTOR_INDEX    = 0x07, /**< Indicates the device should return MS OS 2.0 Descriptor Set. */
-  MS_OS_20_SET_ALT_ENUMERATION = 0x08, /**< Indicates the device may "subsequently return alternate USB descriptors when Windows requests the information." */
-};
+    /* MS OS 2.0 Descriptors Data Structures */
+    enum MS_OS_20_wIndex_t {
+      MS_OS_20_DESCRIPTOR_INDEX    = 0x07, /**< Indicates the device should return MS OS 2.0 Descriptor Set. */
+      MS_OS_20_SET_ALT_ENUMERATION = 0x08, /**< Indicates the device may "subsequently return alternate USB descriptors when Windows requests the information." */
+    };
 
 enum MS_OS_20_Descriptor_Types {
   MS_OS_20_SET_HEADER_DESCRIPTOR       = 0x00,
@@ -180,11 +190,9 @@ typedef struct {
   uint16_t DescriptorType;     /**< MS_OS_20_FEATURE_REG_PROPERTY */
   uint16_t PropertyDataType;   /**< MS_OS_20_Property_Data_types, MS_OS_20_REG_MULTI_SZ even for single interface because libusb. */
   uint16_t PropertyNameLength; /**< The length of the property name. */
-  // FIXME: Only works for 16-bit architectures.
-  wchar_t  PropertyName[sizeof(MS_OS_20_REG_LINK) / sizeof(wchar_t)]; /**< The name of registry property as NULL-terminated UTF-16 LE string. */
-  uint16_t PropertyDataLength;                                        /**< The length of property data. */
-  // FIXME: Only handles REG_SZ & REG_MULTI_SZ types (strings)
-  wchar_t PropertyData[]; /**< Property Data. */
+  uint8_t  PropertyName[MS_OS_20_PROPERTY_NAME_LENGTH]; /**< The name of registry property as NULL-terminated UTF-16 LE string. */
+  uint16_t PropertyDataLength; /**< The length of property data. */
+  uint8_t  PropertyData[MS_OS_20_PROPERTY_DATA_LENGTH]; /**< Property Data. */
 } ATTR_PACKED MS_OS_20_Registry_Property_Descriptor;
 
 /** \brief Microsoft OS 2.0 Feature Descriptor for CCGP Devices.
@@ -200,6 +208,24 @@ typedef struct {
 } ATTR_PACKED MS_OS_20_CCGP_Device_Descriptor;
 
 typedef struct {
-  MS_OS_20_Descriptor_Set_Header_t Header;
-  MS_OS_20_CompatibleID_Descriptor CompatibleID;
+  MS_OS_20_Descriptor_Set_Header_t      Header;
+  MS_OS_20_Configuration_Subset_Header  ConfigurationSubsetHeader;
+  MS_OS_20_Function_Subset_Header       FunctionSubsetHeader;
+  MS_OS_20_CompatibleID_Descriptor      CompatibleID;
+  MS_OS_20_Registry_Property_Descriptor RegistryProperty;
 } MS_OS_20_Descriptor_t;
+
+typedef struct {
+  MS_OS_20_Descriptor_Set_Header_t     Header;
+  MS_OS_20_Configuration_Subset_Header ConfigurationSubsetHeader;
+  MS_OS_20_Function_Subset_Header      FunctionSubsetHeader;
+
+} MS_OS_20_Descriptor_Prefix_t;
+
+typedef struct {
+  MS_OS_20_CompatibleID_Descriptor CompatibleID;
+} MS_OS_20_Descriptor_Suffix_t;
+
+typedef struct {
+  MS_OS_20_Registry_Property_Descriptor RegistryProperty;
+} MS_OS_20_Descriptor_Custom_Property_t;

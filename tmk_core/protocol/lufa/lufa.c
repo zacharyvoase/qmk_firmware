@@ -296,23 +296,42 @@ void webusb_task(void) {
  *  Additionally, while Chrome is built using libusb, a magic registry key needs to be set containing a GUID for
  *  the device.
  */
-const MS_OS_20_Descriptor_t PROGMEM MS_OS_20_Descriptor =
-{
-	.Header =
-		{
-			.Length = CPU_TO_LE16(10),
-			.DescriptorType = CPU_TO_LE16(MS_OS_20_SET_HEADER_DESCRIPTOR),
-			.WindowsVersion = MS_OS_20_WINDOWS_VERSION_8_1,
-			.TotalLength = CPU_TO_LE16(MS_OS_20_DESCRIPTOR_SET_TOTAL_LENGTH)
-		},
-
-	.CompatibleID =
-		{
-			.Length = CPU_TO_LE16(20),
-			.DescriptorType = CPU_TO_LE16(MS_OS_20_FEATURE_COMPATBLE_ID),
-			.CompatibleID = u8"WINUSB\x00", // Automatically null-terminated to 8 bytes
-			.SubCompatibleID = {0, 0, 0, 0, 0, 0, 0, 0}
-		}
+const MS_OS_20_Descriptor_t PROGMEM MS_OS_20_Descriptor = {
+    .Header = {
+        .Length = CPU_TO_LE16(10),
+        .DescriptorType = CPU_TO_LE16(MS_OS_20_SET_HEADER_DESCRIPTOR),
+        .WindowsVersion = MS_OS_20_WINDOWS_VERSION_8_1,
+        .TotalLength = CPU_TO_LE16(MS_OS_20_DESCRIPTOR_SET_TOTAL_LENGTH)
+    },
+    .ConfigurationSubsetHeader = {
+        .Length = CPU_TO_LE16(8),
+        .DescriptorType = CPU_TO_LE16(MS_OS_20_SUBSET_HEADER_CONFIGURATION),
+        .ConfigurationValue = 0,
+        .Reserved = 0,
+        .TotalLength = CPU_TO_LE16(MS_OS_20_DESCRIPTOR_CONFIGURATION_HEADER_LENGTH)
+    },
+    .FunctionSubsetHeader = {
+        .Length = CPU_TO_LE16(8),
+        .DescriptorType = CPU_TO_LE16(MS_OS_20_SUBSET_HEADER_FUNCTION),
+        .FirstInterface = INTERFACE_ID_WebUSB,
+        .Reserved = 0,
+        .SubsetLength = CPU_TO_LE16(MS_OS_20_DESCRIPTOR_FUNCTION_HEADER_LENGTH)
+    },
+    .CompatibleID = {
+        .Length = CPU_TO_LE16(20),
+        .DescriptorType  = CPU_TO_LE16(MS_OS_20_FEATURE_COMPATBLE_ID),
+        .CompatibleID = MS_OS_20_DESCRIPTOR_COMPATIBILITY_ID,
+        .SubCompatibleID = MS_OS_20_DESCRIPTOR_SUB_COMPATIBILITY_ID
+    },
+    .RegistryProperty = {
+        .Length = CPU_TO_LE16(132),
+        .DescriptorType = CPU_TO_LE16(MS_OS_20_FEATURE_REG_PROPERTY),
+        .PropertyDataType = CPU_TO_LE16(MS_OS_20_REG_MULTI_SZ),
+        .PropertyNameLength = CPU_TO_LE16(MS_OS_20_PROPERTY_NAME_LENGTH),
+        .PropertyName = MS_OS_20_PROPERTY_NAME,
+        .PropertyDataLength = CPU_TO_LE16(MS_OS_20_PROPERTY_DATA_LENGTH),
+        .PropertyData = MS_OS_20_PROPERTY_DATA
+    }
 };
 
 /** URL descriptor string. This is a UTF-8 string containing a URL excluding the prefix. At least one of these must be
@@ -594,38 +613,42 @@ void EVENT_USB_Device_ControlRequest(void) {
 
             break;
         case WEBUSB_VENDOR_CODE:
-          switch (USB_ControlRequest.wIndex) {
-            case WebUSB_RTYPE_GetURL:
-              switch (USB_ControlRequest.wValue) {
-                case WEBUSB_LANDING_PAGE_INDEX:
-                  Endpoint_ClearSETUP();
-                  /* Write the descriptor data to the control endpoint */
-                  Endpoint_Write_Control_PStream_LE(&WebUSB_LandingPage, WebUSB_LandingPage.Header.Size);
-                  /* Release the endpoint after transaction. */
-                  Endpoint_ClearStatusStage();
+          if (USB_ControlRequest.bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_VENDOR | REQREC_DEVICE)) {
+              switch (USB_ControlRequest.wIndex) {
+                case WebUSB_RTYPE_GetURL:
+                  switch (USB_ControlRequest.wValue) {
+                    case WEBUSB_LANDING_PAGE_INDEX:
+                      Endpoint_ClearSETUP();
+                      /* Write the descriptor data to the control endpoint */
+                      Endpoint_Write_Control_PStream_LE(&WebUSB_LandingPage, WebUSB_LandingPage.Header.Size);
+                      /* Release the endpoint after transaction. */
+                      Endpoint_ClearStatusStage();
+                      break;
+                    default: /* Stall transfer on invalid index. */
+                      Endpoint_StallTransaction();
+                      break;
+                  }
                   break;
-                default: /* Stall transfer on invalid index. */
+                default: /* Stall on unknown WebUSB request */
                   Endpoint_StallTransaction();
                   break;
               }
-              break;
-            default: /* Stall on unknown WebUSB request */
-              Endpoint_StallTransaction();
-              break;
           }
           break;
         case MS_OS_20_VENDOR_CODE:
-          switch (USB_ControlRequest.wIndex) {
-            case MS_OS_20_DESCRIPTOR_INDEX:
-              Endpoint_ClearSETUP();
-              /* Write the descriptor data to the control endpoint */
-              Endpoint_Write_Control_PStream_LE(&MS_OS_20_Descriptor, MS_OS_20_Descriptor.Header.TotalLength);
-              /* Release the endpoint after transaction. */
-              Endpoint_ClearStatusStage();
-              break;
-            default: /* Stall on unknown MS OS 2.0 request */
-              Endpoint_StallTransaction();
-              break;
+          if (USB_ControlRequest.bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_VENDOR | REQREC_DEVICE)) {
+              switch (USB_ControlRequest.wIndex) {
+                case MS_OS_20_DESCRIPTOR_INDEX:
+                  Endpoint_ClearSETUP();
+                  /* Write the descriptor data to the control endpoint */
+                  Endpoint_Write_Control_PStream_LE(&MS_OS_20_Descriptor, MS_OS_20_Descriptor.Header.TotalLength);
+                  /* Release the endpoint after transaction. */
+                  Endpoint_ClearStatusStage();
+                  break;
+                default: /* Stall on unknown MS OS 2.0 request */
+                  Endpoint_StallTransaction();
+                  break;
+              }
           }
           break;
     }
