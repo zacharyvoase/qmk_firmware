@@ -18,6 +18,10 @@
 #pragma once
 
 /* USB Device descriptor parameter */
+#undef MANUFACTURER
+#define MANUFACTURER    ErgoDox EZ
+#undef PRODUCT
+#define PRODUCT         Planck EZ
 #define DEVICE_VER 0x0000
 
 #undef MATRIX_ROWS
