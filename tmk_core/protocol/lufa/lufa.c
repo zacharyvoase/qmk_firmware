@@ -269,23 +269,47 @@ static void Console_Task(void) {
 #endif
 
 #ifdef WEBUSB_ENABLE
+
+void webusb_send(uint8_t *data, uint8_t length) {
+    if (USB_DeviceState != DEVICE_STATE_Configured) {
+        return;
+    }
+
+    Endpoint_SelectEndpoint(WEBUSB_IN_EPNUM);
+
+    if (Endpoint_IsINReady()) {
+        Endpoint_Write_Stream_LE(data, length, NULL);
+        Endpoint_ClearIN();
+    }
+}
+
 __attribute__((weak)) void webusb_receive(uint8_t *data, uint8_t length) { }
 
-void webusb_task(void) {
-    uint8_t ReceivedData[WEBUSB_EPSIZE];
-    memset(ReceivedData, 0x00, sizeof(ReceivedData));
-    dprint("OUT");
+static void webusb_task(void) {
+    // Create a temporary buffer to hold the read in data from the host
+    uint8_t data[WEBUSB_EPSIZE];
+    bool    data_read = false;
 
-    Endpoint_SelectEndpoint(WEBUSB_OUT_EPADDR);
+    // Device must be connected and configured for the task to run
+    if (USB_DeviceState != DEVICE_STATE_Configured) return;
+
+    Endpoint_SelectEndpoint(WEBUSB_OUT_EPNUM);
+
+    // Check to see if a packet has been sent from the host
     if (Endpoint_IsOUTReceived()) {
-        Endpoint_Read_Stream_LE(ReceivedData, WEBUSB_EPSIZE, NULL);
+        // Check to see if the packet contains data
+        if (Endpoint_IsReadWriteAllowed()) {
+            /* Read data */
+            Endpoint_Read_Stream_LE(data, sizeof(data), NULL);
+            data_read = true;
+        }
+
+        // Finalize the stream transfer to receive the last packet
         Endpoint_ClearOUT();
 
-        webusb_receive(ReceivedData, sizeof(ReceivedData));
-
-        Endpoint_SelectEndpoint(WEBUSB_IN_EPADDR);
-        Endpoint_Write_Stream_LE(ReceivedData, WEBUSB_EPSIZE, NULL);
-        Endpoint_ClearIN();
+        if (data_read) {
+            webusb_receive(data, sizeof(data));
+        }
     }
 }
 
@@ -1069,9 +1093,6 @@ int main(void) {
     setup_usb();
     sei();
 
-#ifdef WEBUSB_ENABLE
-    webusb_task();
-#endif
 
 
 #if defined(MODULE_ADAFRUIT_EZKEY) || defined(MODULE_RN42)
@@ -1136,6 +1157,10 @@ int main(void) {
 
 #ifdef RAW_ENABLE
         raw_hid_task();
+#endif
+
+#ifdef WEBUSB_ENABLE
+    webusb_task();
 #endif
 
 #if !defined(INTERRUPT_CONTROL_ENDPOINT)
