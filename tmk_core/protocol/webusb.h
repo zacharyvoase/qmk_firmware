@@ -215,17 +215,41 @@ typedef struct {
   MS_OS_20_Registry_Property_Descriptor RegistryProperty;
 } MS_OS_20_Descriptor_t;
 
-typedef struct {
-  MS_OS_20_Descriptor_Set_Header_t     Header;
-  MS_OS_20_Configuration_Subset_Header ConfigurationSubsetHeader;
-  MS_OS_20_Function_Subset_Header      FunctionSubsetHeader;
+#define MS_OS_20_DESCRIPTOR { \
+    .Header = { \
+        .Length = CPU_TO_LE16(10), \
+        .DescriptorType = CPU_TO_LE16(MS_OS_20_SET_HEADER_DESCRIPTOR), \
+        .WindowsVersion = MS_OS_20_WINDOWS_VERSION_8_1, \
+        .TotalLength = CPU_TO_LE16(MS_OS_20_DESCRIPTOR_SET_TOTAL_LENGTH) \
+    }, \
+    .ConfigurationSubsetHeader = { \
+        .Length = CPU_TO_LE16(8), \
+        .DescriptorType = CPU_TO_LE16(MS_OS_20_SUBSET_HEADER_CONFIGURATION), \
+        .ConfigurationValue = 0, \
+        .Reserved = 0, \
+        .TotalLength = CPU_TO_LE16(MS_OS_20_DESCRIPTOR_CONFIGURATION_HEADER_LENGTH) \
+    }, \
+    .FunctionSubsetHeader = { \
+        .Length = CPU_TO_LE16(8), \
+        .DescriptorType = CPU_TO_LE16(MS_OS_20_SUBSET_HEADER_FUNCTION), \
+        .FirstInterface = INTERFACE_ID_WebUSB, \
+        .Reserved = 0, \
+        .SubsetLength = CPU_TO_LE16(MS_OS_20_DESCRIPTOR_FUNCTION_HEADER_LENGTH) \
+    }, \
+    .CompatibleID = { \
+        .Length = CPU_TO_LE16(20), \
+        .DescriptorType  = CPU_TO_LE16(MS_OS_20_FEATURE_COMPATBLE_ID), \
+        .CompatibleID = MS_OS_20_DESCRIPTOR_COMPATIBILITY_ID, \
+        .SubCompatibleID = MS_OS_20_DESCRIPTOR_SUB_COMPATIBILITY_ID \
+    }, \
+    .RegistryProperty = { \
+        .Length = CPU_TO_LE16(132), \
+        .DescriptorType = CPU_TO_LE16(MS_OS_20_FEATURE_REG_PROPERTY), \
+        .PropertyDataType = CPU_TO_LE16(MS_OS_20_REG_MULTI_SZ), \
+        .PropertyNameLength = CPU_TO_LE16(MS_OS_20_PROPERTY_NAME_LENGTH), \
+        .PropertyName = MS_OS_20_PROPERTY_NAME, \
+        .PropertyDataLength = CPU_TO_LE16(MS_OS_20_PROPERTY_DATA_LENGTH), \
+        .PropertyData = MS_OS_20_PROPERTY_DATA \
+    } \
+}
 
-} MS_OS_20_Descriptor_Prefix_t;
-
-typedef struct {
-  MS_OS_20_CompatibleID_Descriptor CompatibleID;
-} MS_OS_20_Descriptor_Suffix_t;
-
-typedef struct {
-  MS_OS_20_Registry_Property_Descriptor RegistryProperty;
-} MS_OS_20_Descriptor_Custom_Property_t;

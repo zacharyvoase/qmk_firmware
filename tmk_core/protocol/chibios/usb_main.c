@@ -31,10 +31,6 @@
 #include "usb_descriptor.h"
 #include "usb_driver.h"
 
-#ifdef WEBUSB_ENABLE
-#  include "webusb.h"
-#endif
-
 #ifdef NKRO_ENABLE
 #  include "keycode_config.h"
 
@@ -159,44 +155,18 @@ static const USBEndpointConfig shared_ep_config = {
 #endif
 
 #ifdef WEBUSB_ENABLE
-const MS_OS_20_Descriptor_t PROGMEM MS_OS_20_Descriptor = {
-    .Header = {
-        .Length = CPU_TO_LE16(10),
-        .DescriptorType = CPU_TO_LE16(MS_OS_20_SET_HEADER_DESCRIPTOR),
-        .WindowsVersion = MS_OS_20_WINDOWS_VERSION_8_1,
-        .TotalLength = CPU_TO_LE16(MS_OS_20_DESCRIPTOR_SET_TOTAL_LENGTH)
-    },
-    .ConfigurationSubsetHeader = {
-        .Length = CPU_TO_LE16(8),
-        .DescriptorType = CPU_TO_LE16(MS_OS_20_SUBSET_HEADER_CONFIGURATION),
-        .ConfigurationValue = 0,
-        .Reserved = 0,
-        .TotalLength = CPU_TO_LE16(MS_OS_20_DESCRIPTOR_CONFIGURATION_HEADER_LENGTH)
-    },
-    .FunctionSubsetHeader = {
-        .Length = CPU_TO_LE16(8),
-        .DescriptorType = CPU_TO_LE16(MS_OS_20_SUBSET_HEADER_FUNCTION),
-        .FirstInterface = INTERFACE_ID_WebUSB,
-        .Reserved = 0,
-        .SubsetLength = CPU_TO_LE16(MS_OS_20_DESCRIPTOR_FUNCTION_HEADER_LENGTH)
-    },
-    .CompatibleID = {
-        .Length = CPU_TO_LE16(20),
-        .DescriptorType  = CPU_TO_LE16(MS_OS_20_FEATURE_COMPATBLE_ID),
-        .CompatibleID = MS_OS_20_DESCRIPTOR_COMPATIBILITY_ID,
-        .SubCompatibleID = MS_OS_20_DESCRIPTOR_SUB_COMPATIBILITY_ID
-    },
-    .RegistryProperty = {
-        .Length = CPU_TO_LE16(132),
-        .DescriptorType = CPU_TO_LE16(MS_OS_20_FEATURE_REG_PROPERTY),
-        .PropertyDataType = CPU_TO_LE16(MS_OS_20_REG_MULTI_SZ),
-        .PropertyNameLength = CPU_TO_LE16(MS_OS_20_PROPERTY_NAME_LENGTH),
-        .PropertyName = MS_OS_20_PROPERTY_NAME,
-        .PropertyDataLength = CPU_TO_LE16(MS_OS_20_PROPERTY_DATA_LENGTH),
-        .PropertyData = MS_OS_20_PROPERTY_DATA
-    }
-};
+/** Microsoft OS 2.0 Descriptor. This is used by Windows to select the USB driver for the device.
+ *
+ *  For WebUSB in Chrome, the correct driver is WinUSB, which is selected via CompatibleID.
+ *
+ *  Additionally, while Chrome is built using libusb, a magic registry key needs to be set containing a GUID for
+ *  the device.
+ */
+const MS_OS_20_Descriptor_t PROGMEM MS_OS_20_Descriptor = MS_OS_20_DESCRIPTOR;
 
+/** URL descriptor string. This is a UTF-8 string containing a URL excluding the prefix. At least one of these must be
+ * 	defined and returned when the Landing Page descriptor index is requested.
+ */
 const WebUSB_URL_Descriptor_t PROGMEM WebUSB_LandingPage = WEBUSB_URL_DESCRIPTOR(WEBUSB_LANDING_PAGE_URL);
 #endif
 

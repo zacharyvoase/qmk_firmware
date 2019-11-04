@@ -40,7 +40,9 @@
 #include "report.h"
 #include "usb_descriptor.h"
 #include "print.h"
-
+#ifdef WEBUSB_ENABLE
+#  include "webusb.h"
+#endif
 /*
  * HID report descriptors
  */
@@ -275,10 +277,12 @@ const USB_Descriptor_HIDReport_Datatype_t PROGMEM ConsoleReport[] = {
 };
 #endif
 
+#ifdef WEBUSB_ENABLE
 const USB_Descriptor_BOS_t PROGMEM BOSDescriptor = BOS_DESCRIPTOR(
 		(MS_OS_20_PLATFORM_DESCRIPTOR(MS_OS_20_VENDOR_CODE, MS_OS_20_DESCRIPTOR_SET_TOTAL_LENGTH))
 		(WEBUSB_PLATFORM_DESCRIPTOR(WEBUSB_VENDOR_CODE, WEBUSB_LANDING_PAGE_INDEX))
 );
+#endif
 
 
 /*
@@ -555,10 +559,12 @@ uint16_t get_usb_descriptor(const uint16_t wValue, const uint16_t wIndex, const 
             Size    = sizeof(USB_Descriptor_Device_t);
 
             break;
-		case DTYPE_BOS:
-			Address = &BOSDescriptor;
-			Size = pgm_read_byte(&BOSDescriptor.TotalLength);
-			break;
+        #ifdef WEBUSB_ENABLE
+        case DTYPE_BOS:
+          Address = &BOSDescriptor;
+          Size = pgm_read_byte(&BOSDescriptor.TotalLength);
+          break;
+        #endif
 
         case DTYPE_Configuration:
             Address = &ConfigurationDescriptor;
