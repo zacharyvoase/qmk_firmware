@@ -24,11 +24,13 @@
 #define ES_BSLS_MAC ALGR(KC_6)
 
 enum custom_keycodes {
-  RGB_SLD = EZ_SAFE_RANGE,
-  HSV_172_255_255,
-  HSV_86_255_128,
-  HSV_27_255_255,
+    RGB_SLD = EZ_SAFE_RANGE,
+    HSV_172_255_255,
+    HSV_86_255_128,
+    HSV_27_255_255,
 };
+
+static uint8_t rgb_matrix_mode_temp = 0;
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   [0] = LAYOUT_ergodox_pretty(
@@ -63,85 +65,100 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
                                                                                                                                                                                                                                                                                                                                         ),
 };
 
-
 bool suspended = false;
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-  switch (keycode) {
-      case RGB_SLD:
-        if (record->event.pressed) {
+    switch (keycode) {
+        case RGB_SLD:
+            if (record->event.pressed) {
                 rgblight_mode(1);
-              }
-        return false;
-      case HSV_172_255_255:
-        if (record->event.pressed) {
-                #ifdef RGBLIGHT_ENABLE
-                  rgblight_enable();
-                  rgblight_mode(1);
-                  rgblight_sethsv(172,255,255);
-                #endif
-              }
-        return false;
-      case HSV_86_255_128:
-        if (record->event.pressed) {
-                #ifdef RGBLIGHT_ENABLE
-                  rgblight_enable();
-                  rgblight_mode(1);
-                  rgblight_sethsv(86,255,128);
-                #endif
-              }
-        return false;
-      case HSV_27_255_255:
-        if (record->event.pressed) {
-                #ifdef RGBLIGHT_ENABLE
-                  rgblight_enable();
-                  rgblight_mode(1);
-                  rgblight_sethsv(27,255,255);
-                #endif
-              }
-        return false;
+            }
+            return false;
+        case HSV_172_255_255:
+            if (record->event.pressed) {
+#ifdef RGBLIGHT_ENABLE
+                rgblight_enable();
+                rgblight_mode(1);
+                rgblight_sethsv(172, 255, 255);
+#endif
+            }
+            return false;
+        case HSV_86_255_128:
+            if (record->event.pressed) {
+#ifdef RGBLIGHT_ENABLE
+                rgblight_enable();
+                rgblight_mode(1);
+                rgblight_sethsv(86, 255, 128);
+#endif
+            }
+            return false;
+        case HSV_27_255_255:
+            if (record->event.pressed) {
+#ifdef RGBLIGHT_ENABLE
+                rgblight_enable();
+                rgblight_mode(1);
+                rgblight_sethsv(27, 255, 255);
+#endif
+            }
+            return false;
+        case RGB_MOD:
+        case RGB_RMOD:
+        case RGB_MODE_PLAIN ... RGB_MODE_RGBTEST:
+            if (!record->event.pressed) {
+                rgb_matrix_mode_temp = rgb_matrix_get_mode();
+            }
+            break;
     }
-  return true;
+    return true;
+}
+void keyboard_post_init_user(void) {
+    rgb_matrix_mode_temp = rgb_matrix_get_mode();
 }
 
 layer_state_t layer_state_set_user(layer_state_t state) {
-
-    uint8_t layer = biton32(state);
+    uint8_t layer = get_highest_layer(state);
 
     ergodox_board_led_off();
     ergodox_right_led_1_off();
     ergodox_right_led_2_off();
     ergodox_right_led_3_off();
     switch (layer) {
-          case 1:
+        case 1:
             ergodox_right_led_1_on();
+            rgb_matrix_mode_noeeprom(RGB_MATRIX_CUSTOM_ORYX_FX);
             break;
-          case 2:
+        case 2:
             ergodox_right_led_2_on();
+            rgb_matrix_mode_noeeprom(RGB_MATRIX_CUSTOM_ORYX_FX);
             break;
-          case 3:
+        case 3:
+            rgb_matrix_mode_noeeprom(rgb_matrix_mode_temp);
             ergodox_right_led_3_on();
             break;
-          case 4:
+        case 4:
+            rgb_matrix_mode_noeeprom(rgb_matrix_mode_temp);
             ergodox_right_led_1_on();
             ergodox_right_led_2_on();
             break;
-          case 5:
+        case 5:
+            rgb_matrix_mode_noeeprom(rgb_matrix_mode_temp);
             ergodox_right_led_1_on();
             ergodox_right_led_3_on();
             break;
-          case 6:
+        case 6:
+            rgb_matrix_mode_noeeprom(rgb_matrix_mode_temp);
             ergodox_right_led_2_on();
             ergodox_right_led_3_on();
             break;
-          case 7:
+        case 7:
+            rgb_matrix_mode_noeeprom(rgb_matrix_mode_temp);
             ergodox_right_led_1_on();
             ergodox_right_led_2_on();
             ergodox_right_led_3_on();
             break;
-          default:
+        default:
+            rgb_matrix_mode_noeeprom(rgb_matrix_mode_temp);
             break;
-        }
+    }
     return state;
-
 };
