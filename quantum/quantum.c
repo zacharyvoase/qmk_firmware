@@ -628,9 +628,6 @@ void matrix_init_quantum() {
 #ifdef AUDIO_ENABLE
     audio_init();
 #endif
-#ifdef RGB_MATRIX_ENABLE
-    rgb_matrix_init();
-#endif
 #ifdef ENCODER_ENABLE
     encoder_init();
 #endif

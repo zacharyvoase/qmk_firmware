@@ -86,6 +86,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifdef VIA_ENABLE
 #    include "via.h"
 #endif
+#ifdef RGB_MATRIX_ENABLE
+#    include "rgb_matrix.h"
+#endif
 
 // Only enable this if console is enabled to print to
 #if defined(DEBUG_MATRIX_SCAN_RATE) && defined(CONSOLE_ENABLE)
@@ -250,6 +253,9 @@ void keyboard_init(void) {
 #endif
 #ifdef RGBLIGHT_ENABLE
     rgblight_init();
+#endif
+#ifdef RGB_MATRIX_ENABLE
+    rgb_matrix_init();
 #endif
 #ifdef STENO_ENABLE
     steno_init();
