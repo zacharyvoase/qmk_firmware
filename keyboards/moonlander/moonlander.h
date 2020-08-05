@@ -57,14 +57,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 enum planck_ez_keycodes {
     TOGGLE_LAYER_COLOR = SAFE_RANGE,
+    RGB_SLEEP_TOG,
     ML_SAFE_RANGE,
 };
 
 typedef union {
   uint32_t raw;
   struct {
-    bool         disable_layer_led   :1;
-    bool         rgb_matrix_enable   :1;
+    bool         disable_layer_led         :1;
+    bool         rgb_matrix_enable         :1;
+    bool         rgb_matrix_sleep_enable   :1;
   };
 } keyboard_config_t;
 

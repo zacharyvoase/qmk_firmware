@@ -22,3 +22,7 @@ EEPROM_DRIVER      = i2c
 #project specific files
 SRC = matrix.c
 QUANTUM_LIB_SRC += i2c_master.c
+
+ifeq ($(strip $(MOONLANDER_PRODUCTION_TESTING)), yes)
+    OPT_DEFS += -DMOONLANDER_PRODUCTION_TESTING
+endif

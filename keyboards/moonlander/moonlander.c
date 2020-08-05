@@ -319,7 +319,7 @@ led_config_t g_led_config = { {
 // clang-format on
 
 void suspend_power_down_kb(void) {
-    rgb_matrix_set_suspend_state(true);
+    rgb_matrix_set_suspend_state(keyboard_config.rgb_matrix_sleep_enable);
     suspend_power_down_user();
 }
 
@@ -416,7 +416,36 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
               eeconfig_update_kb(keyboard_config.raw);
             }
             return false;
+        case RGB_SLEEP_TOG:
+            if (record->event.pressed) {
+                keyboard_config.rgb_matrix_sleep_enable ^= true;
+                eeconfig_update_kb(keyboard_config.raw);
+            }
+            break;
 #endif
     }
     return process_record_user(keycode, record);
+}
+
+void matrix_init_kb(void) {
+    keyboard_config.raw = eeconfig_read_kb();
+
+#ifdef RGB_MATRIX_ENABLE
+    if (keyboard_config.rgb_matrix_enable) {
+        rgb_matrix_set_flags(LED_FLAG_ALL);
+    } else {
+        rgb_matrix_set_flags(LED_FLAG_NONE);
+    }
+#endif
+}
+
+void eeconfig_init_kb(void) {  // EEPROM is getting reset!
+    keyboard_config.raw = 0;
+    keyboard_config.rgb_matrix_enable = true;
+#ifndef MOONLANDER_PRODUCTION_TESTING
+    keyboard_config.rgb_matrix_sleep_enable = true;
+#endif
+    eeconfig_update_kb(keyboard_config.raw);
+    eeconfig_update_rgb_matrix_default();
+    eeconfig_init_user();
 }
