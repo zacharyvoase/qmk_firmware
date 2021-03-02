@@ -89,6 +89,7 @@ typedef struct PACKED {
 #    pragma pack(pop)
 #endif
 
+uint8_t float_to_u8(float val);
 RGB hsv_to_rgb(HSV hsv);
 RGB hsv_to_rgb_nocie(HSV hsv);
 #ifdef RGBW

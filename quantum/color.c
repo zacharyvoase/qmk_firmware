@@ -17,6 +17,33 @@
 #include "color.h"
 #include "led_tables.h"
 #include "progmem.h"
+#include "lib/lib8tion/lib8tion.h"
+
+/**
+ * Convert an OKLab HCL (hue/chroma/luminance) color point to linear sRGB.
+ */
+RGB oklch_to_rgb(HSV hsv) {
+    RGB rgb;
+    float a = (float)cos8(hsv.h) * (float)hsv.s / (255 * 255);
+    float b = (float)sin8(hsv.h) * (float)hsv.s / (255 * 255);
+    float l_ = (hsv.v / 255) + 0.3963377774f * a + 0.2158037573f * b;
+    float m_ = (hsv.v / 255) - 0.1055613458f * a - 0.0638541728f * b;
+    float s_ = (hsv.v / 255) - 0.0894841775f * a - 1.2914855480f * b;
+    float l = l_ * l_ * l_;
+    float m = m_ * m_ * m_;
+    float s = s_ * s_ * s_;
+    rgb.r = float_to_u8(+ 4.0767245293f * l - 3.3072168827f * m + 0.2307590544f * s);
+    rgb.g = float_to_u8(- 1.2681437731f * l + 2.6093323231f * m - 0.3411344290f * s);
+    rgb.b = float_to_u8(- 0.0041119885f * l - 0.7034763098f * m + 1.7068625689f * s);
+    return rgb;
+}
+
+uint8_t float_to_u8(float val) {
+    float scaled = 255 * val;
+    if (scaled < 0) return 0;
+    else if (scaled > 255) return 255;
+    return (uint8_t)scaled;
+}
 
 RGB hsv_to_rgb_impl(HSV hsv, bool use_cie) {
     RGB      rgb;
@@ -100,6 +127,8 @@ RGB hsv_to_rgb_impl(HSV hsv, bool use_cie) {
 RGB hsv_to_rgb(HSV hsv) {
 #ifdef USE_CIE1931_CURVE
     return hsv_to_rgb_impl(hsv, true);
+#elif USE_OKLAB_CURVE
+    return oklch_to_rgb(hsv);
 #else
     return hsv_to_rgb_impl(hsv, false);
 #endif
