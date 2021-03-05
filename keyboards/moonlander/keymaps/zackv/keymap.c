@@ -52,6 +52,25 @@ enum host_os_types {
   OS_WIN
 };
 
+enum {
+    TD_RGB_MODE_CYCLE,
+};
+
+void dance_cycle_rgb(qk_tap_dance_state_t *state, void *user_data) {
+    if (state->count == 1) {
+        rgblight_step();
+    } else if (state->count == 2) {
+        rgblight_step_reverse();
+    }
+    reset_tap_dance(state);
+}
+
+// Tap Dance definitions
+qk_tap_dance_action_t tap_dance_actions[] = {
+    // Tap once for next RGB mode, twice for previous RGB mode
+    [TD_RGB_MODE_CYCLE] = ACTION_TAP_DANCE_FN(dance_cycle_rgb),
+};
+
 #ifdef AUDIO_ENABLE
 float song_mac_mode[][2] = SONG(
         Q__NOTE(_A4),
@@ -98,9 +117,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     LT(LAYER_MOVEMENT,KC_TAB), KC_Q,               KC_W,     KC_E,    KC_R,    KC_T,        KC_LBRACKET,                                    KC_RBRACKET,      KC_Y,             KC_U,    KC_I,     KC_O,   KC_P,      KC_BSPACE,
     LCTL_T(KC_ESC),            KC_A,               KC_S,     KC_D,    KC_F,    KC_G,        KC_LPRN,                                        KC_RPRN,          KC_H,             KC_J,    KC_K,     KC_L,   KC_SCOLON, KC_ENTER,
     KC_LSHIFT,                 KC_Z,               KC_X,     KC_C,    KC_V,    KC_B,                                                                          KC_N,             KC_M,    KC_COMMA, KC_DOT, KC_SLASH,  RSFT_T(KC_MINUS),
-    KC_GRAVE,                  MO(LAYER_FUNCTION), KC_LCTRL, KC_LALT, KC_LGUI, WEBUSB_PAIR,                                                                   TO(LAYER_GAMING), KC_LEFT, KC_DOWN,  KC_UP,  KC_RIGHT,  KC_QUOTE,
+    KC_GRAVE,                  MO(LAYER_FUNCTION), KC_LCTRL, KC_LALT, KC_LGUI, TD(TD_RGB_MODE_CYCLE),                                                         TO(LAYER_GAMING), KC_LEFT, KC_DOWN,  KC_UP,  KC_RIGHT,  KC_QUOTE,
 
-    KC_SPACE, MO(LAYER_SYMBOL), KC_LGUI,                                           KC_RGUI, KC_DELETE, KC_SPACE
+    KC_SPACE, MO(LAYER_SYMBOL), KC_LGUI,                                           KC_RGUI, KC_BSLASH, KC_SPACE
   ),
   [LAYER_GAMING] = LAYOUT_moonlander(
     KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT,                                 KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT,
@@ -113,7 +132,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   ),
   [LAYER_SYMBOL] = LAYOUT_moonlander(
     KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT,                                 KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT,
-    KC_TRANSPARENT, KC_EXLM,        KC_AT,          KC_HASH,        KC_DLR,         KC_PERC,        KC_TRANSPARENT,                                 KC_TRANSPARENT, KC_CIRC,        KC_AMPR,        KC_ASTR,        KC_LPRN,        KC_RPRN,        KC_BSLASH,
+    KC_TRANSPARENT, KC_EXLM,        KC_AT,          KC_HASH,        KC_DLR,         KC_PERC,        KC_TRANSPARENT,                                 KC_TRANSPARENT, KC_CIRC,        KC_AMPR,        KC_ASTR,        KC_LPRN,        KC_RPRN,        KC_DELETE,
     KC_TRANSPARENT, KC_1,           KC_2,           KC_3,           KC_4,           KC_5,           KC_TRANSPARENT,                                                                 KC_TRANSPARENT, KC_6,           KC_7,           KC_8,           KC_9,           KC_0,           KC_TRANSPARENT,
     KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT,                                 KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT,
     KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT,                                                                                                 KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT, KC_TRANSPARENT,
