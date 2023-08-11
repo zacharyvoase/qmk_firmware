@@ -17,7 +17,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #include "action_layer.h"
 #include "color.h"
 #include "config.h"
@@ -32,12 +31,12 @@
 #include "songs.h"
 
 enum layers {
-    INS, // Base layer (Vim insert mode)
-    GAM, // Gaming (no tap dances/holds, for low-latency input)
-    NUM, // Numpad (+ turn backspace into delete)
-    FUN, // Function (F-keys, media, other meta stuff)
-    MOV, // Movement (Vim normal mode)
-    SEL, // Selection (Vim visual mode)
+    INS,   // Base layer (Vim insert mode)
+    GAM,   // Gaming (no tap dances/holds, for low-latency input)
+    NUM,   // Numpad (+ turn backspace into delete)
+    FUN,   // Function (F-keys, media, other meta stuff)
+    MOV,   // Movement (Vim normal mode)
+    SEL,   // Selection (Vim visual mode)
     BLANK, // Blank, just exists as a template for copying all the ______ things into place
 };
 
@@ -54,7 +53,7 @@ enum custom_keycodes {
     Z__VIMO, // o => end-of-line, return / O => start-of-line, return, up (similar to o/O in Vim)
     // Selection/modification keys
     Z_CHNGE, // Change (deletes selected text, goes back to 'insert' mode)
-    Z___CUT,  // Cmd-X on mac, Ctrl-X on Windows
+    Z___CUT, // Cmd-X on mac, Ctrl-X on Windows
     Z__COPY, // Cmd-C on mac, Ctrl-C on Windows
     Z_PASTE, // Cmd-V on mac, Ctrl-V on Windows
     Z_END,
@@ -78,15 +77,12 @@ void dance_cycle_rgb(tap_dance_state_t *state, void *user_data) {
 
 // Tap Dance Definitions
 tap_dance_action_t tap_dance_actions[] = {
-  [TD_RGB]  = ACTION_TAP_DANCE_FN (dance_cycle_rgb),
-  // Add other definitions here
+    [TD_RGB] = ACTION_TAP_DANCE_FN(dance_cycle_rgb),
+    // Add other definitions here
 };
 
 // Determines what actual keycodes to send for movement and modification keys
-enum host_os_types {
-  OS_MAC,
-  OS_WIN
-};
+enum host_os_types { OS_MAC, OS_WIN };
 enum host_os_types host_os;
 
 // clang-format off
@@ -163,19 +159,19 @@ void keyboard_post_init_user(void) {
     set_tempo(150);
 }
 
-uint8_t prev_rgb_mode = 0;
-bool prev_rgb_mode_has_value = false;
+uint8_t prev_rgb_mode           = 0;
+bool    prev_rgb_mode_has_value = false;
 
 layer_state_t layer_state_set_user(layer_state_t state) {
     if (IS_LAYER_ON_STATE(state, GAM)) {
         if (rgb_matrix_get_mode() != RGB_MATRIX_CYCLE_SPIRAL) {
-            prev_rgb_mode = rgb_matrix_get_mode();
+            prev_rgb_mode           = rgb_matrix_get_mode();
             prev_rgb_mode_has_value = true;
             rgb_matrix_mode(RGB_MATRIX_CYCLE_SPIRAL);
         }
     } else if (prev_rgb_mode_has_value) {
         rgb_matrix_mode(prev_rgb_mode);
-        prev_rgb_mode = 0;
+        prev_rgb_mode           = 0;
         prev_rgb_mode_has_value = false;
     }
     return state;
@@ -188,7 +184,7 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
             for (uint8_t col = 0; col < MATRIX_COLS; ++col) {
                 uint8_t index = g_led_config.matrix_co[row][col];
                 if (index < led_min || index >= led_max || index == NO_LED) continue;
-                uint16_t keycode = keymap_key_to_keycode(layer, (keypos_t){col,row});
+                uint16_t keycode = keymap_key_to_keycode(layer, (keypos_t){col, row});
 
                 if (keycode >= KC_F1 && keycode <= KC_F24) {
                     rgb_matrix_set_color(index, RGB_GREEN);
@@ -243,201 +239,202 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 
 // Helpers for checking shift state and temporarily unshifting
 #define SHIFTED (get_mods() & MOD_MASK_SHIFT)
-#define UNSHIFT(...) { \
-  uint8_t prevmods = get_mods(); \
-  del_mods(MOD_MASK_SHIFT); \
-  __VA_ARGS__; \
-  set_mods(prevmods); \
-}
+#define UNSHIFT(...)                   \
+    {                                  \
+        uint8_t prevmods = get_mods(); \
+        del_mods(MOD_MASK_SHIFT);      \
+        __VA_ARGS__;                   \
+        set_mods(prevmods);            \
+    }
 
 bool process_movement_key(uint16_t keycode) {
-  // Process arrow keys as-is.
-  switch (keycode) {
-    case KC_UP:
-    case KC_DOWN:
-    case KC_LEFT:
-    case KC_RIGHT:
-      return true;
-  }
+    // Process arrow keys as-is.
+    switch (keycode) {
+        case KC_UP:
+        case KC_DOWN:
+        case KC_LEFT:
+        case KC_RIGHT:
+            return true;
+    }
 
-  if (host_os == OS_MAC) {
-    switch (keycode) {
-      case Z_FWORD:
-        SEND_STRING(SS_LALT(SS_TAP(X_RIGHT)));
-        return false;
-      case Z_BWORD:
-        SEND_STRING(SS_LALT(SS_TAP(X_LEFT)));
-        return false;
-      case Z__LSTR:
-        SEND_STRING(SS_LCTL("a"));
-        return false;
-      case Z__LEND:
-        SEND_STRING(SS_LCTL("e"));
-        return false;
-      case Z__VIMG:
-        if (SHIFTED) {
-          // Shifted; go to end of doc
-          UNSHIFT(SEND_STRING(SS_LCMD(SS_TAP(X_DOWN))));
-        } else {
-          // Go to start of doc
-          SEND_STRING(SS_LCMD(SS_TAP(X_UP)));
+    if (host_os == OS_MAC) {
+        switch (keycode) {
+            case Z_FWORD:
+                SEND_STRING(SS_LALT(SS_TAP(X_RIGHT)));
+                return false;
+            case Z_BWORD:
+                SEND_STRING(SS_LALT(SS_TAP(X_LEFT)));
+                return false;
+            case Z__LSTR:
+                SEND_STRING(SS_LCTL("a"));
+                return false;
+            case Z__LEND:
+                SEND_STRING(SS_LCTL("e"));
+                return false;
+            case Z__VIMG:
+                if (SHIFTED) {
+                    // Shifted; go to end of doc
+                    UNSHIFT(SEND_STRING(SS_LCMD(SS_TAP(X_DOWN))));
+                } else {
+                    // Go to start of doc
+                    SEND_STRING(SS_LCMD(SS_TAP(X_UP)));
+                }
+                return false;
+            case Z__VIMO:
+                if (SHIFTED) {
+                    // Shifted; insert on previous line
+                    UNSHIFT(SEND_STRING(SS_LCTL("a") SS_TAP(X_ENTER) SS_TAP(X_UP)));
+                } else {
+                    // Insert on next line
+                    SEND_STRING(SS_LCTL("e") SS_TAP(X_ENTER));
+                }
+                return false;
+            case Z_PASTE:
+                SEND_STRING(SS_LCMD("v"));
+                return false;
         }
-        return false;
-      case Z__VIMO:
-        if (SHIFTED) {
-          // Shifted; insert on previous line
-          UNSHIFT(SEND_STRING(SS_LCTL("a") SS_TAP(X_ENTER) SS_TAP(X_UP)));
-        } else {
-          // Insert on next line
-          SEND_STRING(SS_LCTL("e") SS_TAP(X_ENTER));
+    } else if (host_os == OS_WIN) {
+        switch (keycode) {
+            case Z_FWORD:
+                SEND_STRING(SS_LCTL(SS_TAP(X_RIGHT)));
+                return false;
+            case Z_BWORD:
+                SEND_STRING(SS_LCTL(SS_TAP(X_LEFT)));
+                return false;
+            case Z__LSTR:
+                SEND_STRING(SS_TAP(X_HOME));
+                return false;
+            case Z__LEND:
+                SEND_STRING(SS_TAP(X_END));
+                return false;
+            case Z__VIMG:
+                if (SHIFTED) {
+                    // Shifted; go to end of doc
+                    UNSHIFT(SEND_STRING(SS_LCTL(SS_TAP(X_END))));
+                } else {
+                    // Go to start of doc
+                    SEND_STRING(SS_LCTL(SS_TAP(X_HOME)));
+                }
+                return false;
+            case Z__VIMO:
+                if (SHIFTED) {
+                    // Shifted; insert on previous line
+                    UNSHIFT(SEND_STRING(SS_TAP(X_HOME) SS_TAP(X_ENTER) SS_TAP(X_UP)));
+                } else {
+                    // Insert on next line
+                    SEND_STRING(SS_TAP(X_END) SS_TAP(X_ENTER));
+                }
+                return false;
+            case Z_PASTE:
+                SEND_STRING(SS_LCTL("v"));
+                return false;
         }
-        return false;
-      case Z_PASTE:
-        SEND_STRING(SS_LCMD("v"));
-        return false;
     }
-  } else if (host_os == OS_WIN) {
-    switch (keycode) {
-      case Z_FWORD:
-        SEND_STRING(SS_LCTL(SS_TAP(X_RIGHT)));
-        return false;
-      case Z_BWORD:
-        SEND_STRING(SS_LCTL(SS_TAP(X_LEFT)));
-        return false;
-      case Z__LSTR:
-        SEND_STRING(SS_TAP(X_HOME));
-        return false;
-      case Z__LEND:
-        SEND_STRING(SS_TAP(X_END));
-        return false;
-      case Z__VIMG:
-        if (SHIFTED) {
-          // Shifted; go to end of doc
-          UNSHIFT(SEND_STRING(SS_LCTL(SS_TAP(X_END))));
-        } else {
-          // Go to start of doc
-          SEND_STRING(SS_LCTL(SS_TAP(X_HOME)));
-        }
-        return false;
-      case Z__VIMO:
-        if (SHIFTED) {
-          // Shifted; insert on previous line
-          UNSHIFT(SEND_STRING(SS_TAP(X_HOME) SS_TAP(X_ENTER) SS_TAP(X_UP)));
-        } else {
-          // Insert on next line
-          SEND_STRING(SS_TAP(X_END) SS_TAP(X_ENTER));
-        }
-        return false;
-      case Z_PASTE:
-        SEND_STRING(SS_LCTL("v"));
-        return false;
-    }
-  }
-  return true;
+    return true;
 }
 
 bool process_selection_key(uint16_t keycode) {
-  // Process arrow keys by sending the shifted key.
-  switch (keycode) {
-    case KC_UP:
-      SEND_STRING(SS_LSFT(SS_TAP(X_UP)));
-      return false;
-    case KC_DOWN:
-      SEND_STRING(SS_LSFT(SS_TAP(X_DOWN)));
-      return false;
-    case KC_LEFT:
-      SEND_STRING(SS_LSFT(SS_TAP(X_LEFT)));
-      return false;
-    case KC_RIGHT:
-      SEND_STRING(SS_LSFT(SS_TAP(X_RIGHT)));
-      return false;
-  }
+    // Process arrow keys by sending the shifted key.
+    switch (keycode) {
+        case KC_UP:
+            SEND_STRING(SS_LSFT(SS_TAP(X_UP)));
+            return false;
+        case KC_DOWN:
+            SEND_STRING(SS_LSFT(SS_TAP(X_DOWN)));
+            return false;
+        case KC_LEFT:
+            SEND_STRING(SS_LSFT(SS_TAP(X_LEFT)));
+            return false;
+        case KC_RIGHT:
+            SEND_STRING(SS_LSFT(SS_TAP(X_RIGHT)));
+            return false;
+    }
 
-  if (host_os == OS_MAC) {
-    switch (keycode) {
-      case Z_FWORD:
-        SEND_STRING(SS_LSFT(SS_LALT(SS_TAP(X_RIGHT))));
-        return false;
-      case Z_BWORD:
-        SEND_STRING(SS_LSFT(SS_LALT(SS_TAP(X_LEFT))));
-        return false;
-      case Z__LSTR:
-        SEND_STRING(SS_LSFT(SS_LCTL("a")));
-        return false;
-      case Z__LEND:
-        SEND_STRING(SS_LSFT(SS_LCTL("e")));
-        return false;
-      case Z__VIMG:
-        if (SHIFTED) {
-          // Shifted; go to end of doc
-          UNSHIFT(SEND_STRING(SS_LSFT(SS_LCMD(SS_TAP(X_DOWN)))));
-        } else {
-          // Go to start of doc
-          SEND_STRING(SS_LSFT(SS_LCMD(SS_TAP(X_UP))));
+    if (host_os == OS_MAC) {
+        switch (keycode) {
+            case Z_FWORD:
+                SEND_STRING(SS_LSFT(SS_LALT(SS_TAP(X_RIGHT))));
+                return false;
+            case Z_BWORD:
+                SEND_STRING(SS_LSFT(SS_LALT(SS_TAP(X_LEFT))));
+                return false;
+            case Z__LSTR:
+                SEND_STRING(SS_LSFT(SS_LCTL("a")));
+                return false;
+            case Z__LEND:
+                SEND_STRING(SS_LSFT(SS_LCTL("e")));
+                return false;
+            case Z__VIMG:
+                if (SHIFTED) {
+                    // Shifted; go to end of doc
+                    UNSHIFT(SEND_STRING(SS_LSFT(SS_LCMD(SS_TAP(X_DOWN)))));
+                } else {
+                    // Go to start of doc
+                    SEND_STRING(SS_LSFT(SS_LCMD(SS_TAP(X_UP))));
+                }
+                return false;
+            case Z_CHNGE:
+                SEND_STRING(SS_TAP(X_BSPC));
+                layer_move(INS);
+                return false;
+            case Z__COPY:
+                SEND_STRING(SS_LCMD("c") SS_TAP(X_LEFT));
+                layer_move(INS);
+                return false;
+            case Z___CUT:
+                SEND_STRING(SS_LCMD("x"));
+                layer_move(INS);
+                return false;
+            case Z_PASTE:
+                SEND_STRING(SS_LCMD("v"));
+                layer_move(INS);
+                return false;
         }
-        return false;
-      case Z_CHNGE:
-        SEND_STRING(SS_TAP(X_BSPC));
-        layer_move(INS);
-        return false;
-      case Z__COPY:
-        SEND_STRING(SS_LCMD("c") SS_TAP(X_LEFT));
-        layer_move(INS);
-        return false;
-      case Z___CUT:
-        SEND_STRING(SS_LCMD("x"));
-        layer_move(INS);
-        return false;
-      case Z_PASTE:
-        SEND_STRING(SS_LCMD("v"));
-        layer_move(INS);
-        return false;
-    }
-  } else if (host_os == OS_WIN) {
-    switch (keycode) {
-      case Z_FWORD:
-        SEND_STRING(SS_LSFT(SS_LCTL(SS_TAP(X_RIGHT))));
-        return false;
-      case Z_BWORD:
-        SEND_STRING(SS_LSFT(SS_LCTL(SS_TAP(X_LEFT))));
-        return false;
-      case Z__LSTR:
-        SEND_STRING(SS_LSFT(SS_TAP(X_HOME)));
-        return false;
-      case Z__LEND:
-        SEND_STRING(SS_LSFT(SS_TAP(X_END)));
-        return false;
-      case Z__VIMG:
-        if (SHIFTED) {
-          // Shifted; go to end of doc
-          UNSHIFT(SEND_STRING(SS_LSFT(SS_LCTL(SS_TAP(X_END)))));
-        } else {
-          // Go to start of doc
-          SEND_STRING(SS_LSFT(SS_LCTL(SS_TAP(X_HOME))));
+    } else if (host_os == OS_WIN) {
+        switch (keycode) {
+            case Z_FWORD:
+                SEND_STRING(SS_LSFT(SS_LCTL(SS_TAP(X_RIGHT))));
+                return false;
+            case Z_BWORD:
+                SEND_STRING(SS_LSFT(SS_LCTL(SS_TAP(X_LEFT))));
+                return false;
+            case Z__LSTR:
+                SEND_STRING(SS_LSFT(SS_TAP(X_HOME)));
+                return false;
+            case Z__LEND:
+                SEND_STRING(SS_LSFT(SS_TAP(X_END)));
+                return false;
+            case Z__VIMG:
+                if (SHIFTED) {
+                    // Shifted; go to end of doc
+                    UNSHIFT(SEND_STRING(SS_LSFT(SS_LCTL(SS_TAP(X_END)))));
+                } else {
+                    // Go to start of doc
+                    SEND_STRING(SS_LSFT(SS_LCTL(SS_TAP(X_HOME))));
+                }
+                return false;
+            case Z_CHNGE:
+                SEND_STRING(SS_TAP(X_BSPC));
+                layer_move(INS);
+                return false;
+            case Z__COPY:
+                SEND_STRING(SS_LCTL("c") SS_TAP(X_LEFT));
+                layer_move(INS);
+                return false;
+            case Z___CUT:
+                SEND_STRING(SS_LCTL("x"));
+                layer_move(INS);
+                return false;
+            case Z_PASTE:
+                SEND_STRING(SS_LCTL("v"));
+                layer_move(INS);
+                return false;
         }
-        return false;
-      case Z_CHNGE:
-        SEND_STRING(SS_TAP(X_BSPC));
-        layer_move(INS);
-        return false;
-      case Z__COPY:
-        SEND_STRING(SS_LCTL("c") SS_TAP(X_LEFT));
-        layer_move(INS);
-        return false;
-      case Z___CUT:
-        SEND_STRING(SS_LCTL("x"));
-        layer_move(INS);
-        return false;
-      case Z_PASTE:
-        SEND_STRING(SS_LCTL("v"));
-        layer_move(INS);
-        return false;
     }
-  }
-  // Fall-through: anything other than shift, switch back to Insert mode
-  if (keycode != KC_LEFT_SHIFT && keycode != KC_RIGHT_SHIFT) {
-    layer_move(INS);
-  }
-  // Do normal handling of the key.
-  return true;
+    // Fall-through: anything other than shift, switch back to Insert mode
+    if (keycode != KC_LEFT_SHIFT && keycode != KC_RIGHT_SHIFT) {
+        layer_move(INS);
+    }
+    // Do normal handling of the key.
+    return true;
 }
