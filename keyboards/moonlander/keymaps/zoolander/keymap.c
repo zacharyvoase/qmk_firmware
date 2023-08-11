@@ -21,6 +21,7 @@
 #include "color.h"
 #include "config.h"
 #include "keymap.h"
+#include "process_tap_dance.h"
 #include "quantum.h"
 #include "rgb_matrix.h"
 #include "rgb_matrix_types.h"
@@ -29,6 +30,7 @@
 #include "keycodes.h"
 #include "version.h"
 #include "songs.h"
+#include "supershift.h"
 
 enum layers {
     INS,   // Base layer (Vim insert mode)
@@ -37,6 +39,7 @@ enum layers {
     FUN,   // Function (F-keys, media, other meta stuff)
     MOV,   // Movement (Vim normal mode)
     SEL,   // Selection (Vim visual mode)
+    LGT,   // RGB lights modification layer
     BLANK, // Blank, just exists as a template for copying all the ______ things into place
 };
 
@@ -65,7 +68,22 @@ enum custom_keycodes {
 // Tap Dance Declarations
 enum {
     TD_RGB = 0,
+    TD_SSHFT,
+    TD_AIRPODS,
 };
+
+void dance_airpods(tap_dance_state_t *state, void *user_data) {
+    if (state->finished) {
+        if (state->count == 1) {
+            SEND_STRING(SS_TAP(X_MEDIA_PLAY_PAUSE));
+        } else if (state->count == 2) {
+            SEND_STRING(SS_TAP(X_MEDIA_NEXT_TRACK));
+        } else if (state->count == 3) {
+            SEND_STRING(SS_TAP(X_MEDIA_PREV_TRACK));
+        }
+        reset_tap_dance(state);
+    }
+}
 
 void dance_cycle_rgb(tap_dance_state_t *state, void *user_data) {
     if (state->finished) {
@@ -80,7 +98,9 @@ void dance_cycle_rgb(tap_dance_state_t *state, void *user_data) {
 
 // Tap Dance Definitions
 tap_dance_action_t tap_dance_actions[] = {
-    [TD_RGB] = ACTION_TAP_DANCE_FN(dance_cycle_rgb),
+    [TD_RGB]     = ACTION_TAP_DANCE_FN(dance_cycle_rgb),
+    [TD_SSHFT]   = ACTION_TAP_DANCE_FN_ADVANCED(NULL, supershift_finished, supershift_reset),
+    [TD_AIRPODS] = ACTION_TAP_DANCE_FN(dance_airpods),
     // Add other definitions here
 };
 
@@ -94,18 +114,18 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     KC_ESC,         KC_1,    KC_2,    KC_3,    KC_4,          KC_5,       CW_TOGG, TT(NUM), KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_EQL,
     LT(MOV,KC_TAB), KC_Q,    KC_W,    KC_E,    KC_R,          KC_T,       KC_LBRC, KC_RBRC, KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_BSPC,
     LCTL_T(KC_ESC), KC_A,    KC_S,    KC_D,    KC_F,          KC_G,       KC_LPRN, KC_RPRN, KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_ENT,
-    KC_LSFT,        KC_Z,    KC_X,    KC_C,    KC_V,          KC_B,                                 KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, RSFT_T(KC_MINS),
-    LT(NUM,KC_GRV), MO(FUN), KC_LCTL, KC_LALT, KC_LGUI,       TD(TD_RGB),                           TO(GAM), KC_LEFT, KC_DOWN, KC_UP,   KC_RGHT, KC_QUOT,
-    KC_SPC,         MO(NUM), KC_LGUI,                                                                           KC_RGUI, KC_BSLS, KC_SPC
+    TD(TD_SSHFT),   KC_Z,    KC_X,    KC_C,    KC_V,          KC_B,                                 KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, RSFT_T(KC_MINS),
+    LT(NUM,KC_GRV), MO(FUN), KC_LCTL, KC_LALT, KC_LGUI,       TD(TD_AIRPODS),                       TO(GAM), KC_LEFT, KC_DOWN, KC_UP,   KC_RGHT, KC_QUOT,
+    KC_SPC,         MO(NUM), MO(LGT),                                                                           KC_RGUI, KC_BSLS, KC_SPC
     ),
 
     [GAM] = LAYOUT_moonlander(
     _______, _______, _______, _______, _______, _______, XXXXXXX, XXXXXXX, _______, _______, _______, _______, _______, _______,
     KC_TAB,  _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
     KC_LCTL, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
-    _______, _______, _______, _______, _______, _______,                           _______, _______, _______, _______, _______, _______,
+    KC_LSFT, _______, _______, _______, _______, _______,                           _______, _______, _______, _______, _______, _______,
     KC_GRV,  XXXXXXX, _______, _______, _______, XXXXXXX,                           TO(INS), _______, _______, _______, _______, _______,
-    _______, MO(NUM), _______,                                                                  _______, _______, _______
+    _______, _______, _______,                                                                  _______, _______, _______
     ),
 
     [NUM] = LAYOUT_moonlander(
@@ -142,6 +162,15 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     KC_LSFT, XXXXXXX, Z___CUT, Z_CHNGE, XXXXXXX, Z_BWORD,                           XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, KC_RSFT,
     KC_GRV,  XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,                           XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, KC_QUOT,
     XXXXXXX, XXXXXXX, XXXXXXX,                                                                  XXXXXXX, XXXXXXX, XXXXXXX
+    ),
+
+    [LGT] = LAYOUT_moonlander(
+    XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+    XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+    XXXXXXX, XXXXXXX, RGB_SAI, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, RGB_HUI, XXXXXXX, RGB_SPI, XXXXXXX, XXXXXXX, XXXXXXX,
+    KC_LSFT, XXXXXXX, XXXXXXX, XXXXXXX, RGB_VAI, XXXXXXX,                           XXXXXXX, RGB_MOD, XXXXXXX, XXXXXXX, XXXXXXX, KC_RSFT,
+    XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,                           XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+    XXXXXXX, XXXXXXX, XXXXXXX,                                                                  XXXXXXX, XXXXXXX, RGB_TOG
     ),
 
     [BLANK] = LAYOUT_moonlander(
@@ -195,6 +224,8 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
                     rgb_matrix_set_color(index, RGB_RED);
                 } else if (keycode >= KC_AUDIO_MUTE && keycode <= KC_MEDIA_EJECT) {
                     rgb_matrix_set_color(index, RGB_BLUE);
+                } else if (keycode >= RGB_TOG && keycode <= RGB_SPD) {
+                    rgb_matrix_set_color(index, RGB_PURPLE);
                 } else if (keycode > KC_TRANSPARENT) {
                     rgb_matrix_set_color(index, RGB_WHITE);
                 }
