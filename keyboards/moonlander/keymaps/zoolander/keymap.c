@@ -49,8 +49,11 @@ enum custom_keycodes {
     Z_BWORD, // backwards word
     Z__LSTR, // line start
     Z__LEND, // line end
+    Z__PSTR, // paragraph start
+    Z__PEND, // paragraph end
     Z__VIMG, // g => start of document / G => end of document (same as Vim)
     Z__VIMO, // o => end-of-line, return / O => start-of-line, return, up (similar to o/O in Vim)
+    Z____UP, // up, or page up if shift is held
     // Selection/modification keys
     Z_CHNGE, // Change (deletes selected text, goes back to 'insert' mode)
     Z___CUT, // Cmd-X on mac, Ctrl-X on Windows
@@ -125,7 +128,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     [MOV] = LAYOUT_moonlander(
     XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
-    _______, XXXXXXX, Z_FWORD, Z__LEND, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, Z__VIMO, Z_PASTE, XXXXXXX,
+    _______, XXXXXXX, Z_FWORD, Z__LEND, XXXXXXX, XXXXXXX, Z__PSTR, Z__PEND, XXXXXXX, XXXXXXX, XXXXXXX, Z__VIMO, Z_PASTE, XXXXXXX,
     XXXXXXX, Z__LSTR, XXXXXXX, XXXXXXX, XXXXXXX, Z__VIMG, XXXXXXX, XXXXXXX, KC_LEFT, KC_DOWN, KC_UP,   KC_RGHT, XXXXXXX, XXXXXXX,
     KC_LSFT, XXXXXXX, KC_DEL,  XXXXXXX, TO(SEL), Z_BWORD,                           XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, KC_RSFT,
     XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,                           XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
@@ -134,7 +137,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     [SEL] = LAYOUT_moonlander(
     TO(INS), XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, Z__LSTR, XXXXXXX,
-    XXXXXXX, XXXXXXX, Z_FWORD, Z__LEND, XXXXXXX, XXXXXXX, KC_LBRC, KC_RBRC, Z__COPY, XXXXXXX, XXXXXXX, XXXXXXX, Z_PASTE, XXXXXXX,
+    XXXXXXX, XXXXXXX, Z_FWORD, Z__LEND, XXXXXXX, XXXXXXX, Z__PSTR, Z__PEND, Z__COPY, XXXXXXX, XXXXXXX, XXXXXXX, Z_PASTE, XXXXXXX,
     TO(INS), Z__LSTR, XXXXXXX, Z___CUT, XXXXXXX, Z__VIMG, KC_LPRN, KC_RPRN, KC_LEFT, KC_DOWN, KC_UP,   KC_RGHT, XXXXXXX, XXXXXXX,
     KC_LSFT, XXXXXXX, Z___CUT, Z_CHNGE, XXXXXXX, Z_BWORD,                           XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, KC_RSFT,
     KC_GRV,  XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,                           XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, KC_QUOT,
@@ -247,18 +250,29 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         set_mods(prevmods);            \
     }
 
-bool process_movement_key(uint16_t keycode) {
-    // Process arrow keys as-is.
-    switch (keycode) {
-        case KC_UP:
-        case KC_DOWN:
-        case KC_LEFT:
-        case KC_RIGHT:
-            return true;
+// Macro for sending an alternative (unshifted) key sequence when shifted.
+#define HJKL_MOVEMENT(shifted)             \
+    {                                      \
+        if (SHIFTED) {                     \
+            UNSHIFT(SEND_STRING(shifted)); \
+            return false;                  \
+        } else {                           \
+            return true;                   \
+        }                                  \
     }
 
+bool process_movement_key(uint16_t keycode) {
     if (host_os == OS_MAC) {
+        // Source: https://support.apple.com/en-us/HT201236
         switch (keycode) {
+            case KC_LEFT:
+                HJKL_MOVEMENT(SS_TAP(X_HOME))
+            case KC_DOWN:
+                HJKL_MOVEMENT(SS_TAP(X_PAGE_DOWN))
+            case KC_UP:
+                HJKL_MOVEMENT(SS_TAP(X_PAGE_UP))
+            case KC_RIGHT:
+                HJKL_MOVEMENT(SS_TAP(X_END))
             case Z_FWORD:
                 SEND_STRING(SS_LALT(SS_TAP(X_RIGHT)));
                 return false;
@@ -266,10 +280,16 @@ bool process_movement_key(uint16_t keycode) {
                 SEND_STRING(SS_LALT(SS_TAP(X_LEFT)));
                 return false;
             case Z__LSTR:
-                SEND_STRING(SS_LCTL("a"));
+                SEND_STRING(SS_LGUI(SS_TAP(X_LEFT)));
                 return false;
             case Z__LEND:
-                SEND_STRING(SS_LCTL("e"));
+                SEND_STRING(SS_LGUI(SS_TAP(X_RIGHT)));
+                return false;
+            case Z__PSTR:
+                SEND_STRING(SS_LALT(SS_TAP(X_UP)));
+                return false;
+            case Z__PEND:
+                SEND_STRING(SS_LALT(SS_TAP(X_DOWN)));
                 return false;
             case Z__VIMG:
                 if (SHIFTED) {
@@ -294,7 +314,16 @@ bool process_movement_key(uint16_t keycode) {
                 return false;
         }
     } else if (host_os == OS_WIN) {
+        // Source: https://support.microsoft.com/en-gb/office/keyboard-shortcuts-in-word-95ef89dd-7142-4b50-afb2-f762f663ceb2#bkmk_navigatewin
         switch (keycode) {
+            case KC_LEFT:
+                HJKL_MOVEMENT(SS_LCTL(SS_TAP(X_HOME)));
+            case KC_DOWN:
+                HJKL_MOVEMENT(SS_LCTL(SS_TAP(X_PAGE_DOWN)));
+            case KC_UP:
+                HJKL_MOVEMENT(SS_LCTL(SS_TAP(X_PAGE_UP)));
+            case KC_RIGHT:
+                HJKL_MOVEMENT(SS_LCTL(SS_TAP(X_END)));
             case Z_FWORD:
                 SEND_STRING(SS_LCTL(SS_TAP(X_RIGHT)));
                 return false;
@@ -306,6 +335,12 @@ bool process_movement_key(uint16_t keycode) {
                 return false;
             case Z__LEND:
                 SEND_STRING(SS_TAP(X_END));
+                return false;
+            case Z__PSTR:
+                SEND_STRING(SS_LCTL(SS_TAP(X_UP)));
+                return false;
+            case Z__PEND:
+                SEND_STRING(SS_LCTL(SS_TAP(X_DOWN)));
                 return false;
             case Z__VIMG:
                 if (SHIFTED) {
@@ -333,25 +368,27 @@ bool process_movement_key(uint16_t keycode) {
     return true;
 }
 
-bool process_selection_key(uint16_t keycode) {
-    // Process arrow keys by sending the shifted key.
-    switch (keycode) {
-        case KC_UP:
-            SEND_STRING(SS_LSFT(SS_TAP(X_UP)));
-            return false;
-        case KC_DOWN:
-            SEND_STRING(SS_LSFT(SS_TAP(X_DOWN)));
-            return false;
-        case KC_LEFT:
-            SEND_STRING(SS_LSFT(SS_TAP(X_LEFT)));
-            return false;
-        case KC_RIGHT:
-            SEND_STRING(SS_LSFT(SS_TAP(X_RIGHT)));
-            return false;
+#define HJKL_SELECTION(unshifted, shifted)   \
+    {                                        \
+        if (SHIFTED) {                       \
+            SEND_STRING(shifted);            \
+        } else {                             \
+            SEND_STRING(SS_LSFT(unshifted)); \
+        }                                    \
+        return false;                        \
     }
 
+bool process_selection_key(uint16_t keycode) {
     if (host_os == OS_MAC) {
         switch (keycode) {
+            case KC_LEFT:
+                HJKL_SELECTION(SS_TAP(X_LEFT), SS_TAP(X_HOME))
+            case KC_DOWN:
+                HJKL_SELECTION(SS_TAP(X_DOWN), SS_TAP(X_PAGE_DOWN))
+            case KC_UP:
+                HJKL_SELECTION(SS_TAP(X_UP), SS_TAP(X_PAGE_UP))
+            case KC_RIGHT:
+                HJKL_SELECTION(SS_TAP(X_RIGHT), SS_TAP(X_END))
             case Z_FWORD:
                 SEND_STRING(SS_LSFT(SS_LALT(SS_TAP(X_RIGHT))));
                 return false;
@@ -359,10 +396,16 @@ bool process_selection_key(uint16_t keycode) {
                 SEND_STRING(SS_LSFT(SS_LALT(SS_TAP(X_LEFT))));
                 return false;
             case Z__LSTR:
-                SEND_STRING(SS_LSFT(SS_LCTL("a")));
+                SEND_STRING(SS_LSFT(SS_LGUI(SS_TAP(X_LEFT))));
                 return false;
             case Z__LEND:
-                SEND_STRING(SS_LSFT(SS_LCTL("e")));
+                SEND_STRING(SS_LSFT(SS_LCTL(SS_TAP(X_RIGHT))));
+                return false;
+            case Z__PSTR:
+                SEND_STRING(SS_LSFT(SS_LALT(SS_TAP(X_UP))));
+                return false;
+            case Z__PEND:
+                SEND_STRING(SS_LSFT(SS_LALT(SS_TAP(X_DOWN))));
                 return false;
             case Z__VIMG:
                 if (SHIFTED) {
@@ -392,6 +435,14 @@ bool process_selection_key(uint16_t keycode) {
         }
     } else if (host_os == OS_WIN) {
         switch (keycode) {
+            case KC_LEFT:
+                HJKL_SELECTION(SS_TAP(X_LEFT), SS_LCTL(SS_TAP(X_HOME)))
+            case KC_DOWN:
+                HJKL_SELECTION(SS_TAP(X_DOWN), SS_LCTL(SS_TAP(X_PAGE_DOWN)))
+            case KC_UP:
+                HJKL_SELECTION(SS_TAP(X_UP), SS_LCTL(SS_TAP(X_PAGE_UP)))
+            case KC_RIGHT:
+                HJKL_SELECTION(SS_TAP(X_RIGHT), SS_LCTL(SS_TAP(X_END)))
             case Z_FWORD:
                 SEND_STRING(SS_LSFT(SS_LCTL(SS_TAP(X_RIGHT))));
                 return false;
@@ -403,6 +454,12 @@ bool process_selection_key(uint16_t keycode) {
                 return false;
             case Z__LEND:
                 SEND_STRING(SS_LSFT(SS_TAP(X_END)));
+                return false;
+            case Z__PSTR:
+                SEND_STRING(SS_LSFT(SS_LCTL(SS_TAP(X_UP))));
+                return false;
+            case Z__PEND:
+                SEND_STRING(SS_LSFT(SS_LCTL(SS_TAP(X_DOWN))));
                 return false;
             case Z__VIMG:
                 if (SHIFTED) {
