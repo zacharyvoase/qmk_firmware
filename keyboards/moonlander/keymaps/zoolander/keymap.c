@@ -17,6 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include QMK_KEYBOARD_H
+
 #include "action_layer.h"
 #include "color.h"
 #include "config.h"
@@ -25,23 +27,27 @@
 #include "quantum.h"
 #include "rgb_matrix.h"
 #include "rgb_matrix_types.h"
-#include QMK_KEYBOARD_H
 #include "audio.h"
 #include "keycodes.h"
 #include "version.h"
 #include "songs.h"
 #include "supershift.h"
+#include "shiftstate.h"
 
 enum layers {
     INS,   // Base layer (Vim insert mode)
     GAM,   // Gaming (no tap dances/holds, for low-latency input)
-    NUM,   // Numpad (+ turn backspace into delete)
+    SYM,   // Symbols, Smart quotes, Numpad, turn backspace into delete
     FUN,   // Function (F-keys, media, other meta stuff)
     MOV,   // Movement (Vim normal mode)
     SEL,   // Selection (Vim visual mode)
     LGT,   // RGB lights modification layer
     BLANK, // Blank, just exists as a template for copying all the ______ things into place
 };
+
+// Determines what actual keycodes to send for smart quote, movement and modification keys
+typedef enum { OS_MAC, OS_WIN } host_os_t;
+static host_os_t host_os;
 
 enum custom_keycodes {
     Z_START = SAFE_RANGE,
@@ -67,9 +73,9 @@ enum custom_keycodes {
 
 // Tap Dance Declarations
 enum {
-    TD_RGB = 0,
-    TD_SSHFT,
-    TD_AIRPODS,
+    TD_SSHFT = 0, // Supershift
+    TD_AIRPODS,   // Airpods-style media key
+    TD_SMRTQUO,   // Smart quote key
 };
 
 void dance_airpods(tap_dance_state_t *state, void *user_data) {
@@ -85,38 +91,66 @@ void dance_airpods(tap_dance_state_t *state, void *user_data) {
     }
 }
 
-void dance_cycle_rgb(tap_dance_state_t *state, void *user_data) {
+#define MAC_LEFT_SINGLE_QUOTE SS_LALT("]")
+#define MAC_RGHT_SINGLE_QUOTE SS_LALT(SS_LSFT("]"))
+#define MAC_LEFT_DOUBLE_QUOTE SS_LALT("[")
+#define MAC_RGHT_DOUBLE_QUOTE SS_LALT(SS_LSFT("["))
+#define WIN_LEFT_SINGLE_QUOTE SS_LALT("0145")
+#define WIN_RGHT_SINGLE_QUOTE SS_LALT("0146")
+#define WIN_LEFT_DOUBLE_QUOTE SS_LALT("0147")
+#define WIN_RGHT_DOUBLE_QUOTE SS_LALT("0148")
+
+void dance_smartquote(tap_dance_state_t *state, void *user_data) {
     if (state->finished) {
         if (state->count == 1) {
-            rgb_matrix_step();
+            if (!SHIFTED) {
+                if (host_os == OS_MAC) {
+                    SEND_STRING(MAC_LEFT_SINGLE_QUOTE);
+                } else if (host_os == OS_WIN) {
+                    SEND_STRING(WIN_LEFT_SINGLE_QUOTE);
+                }
+            } else {
+                if (host_os == OS_MAC) {
+                    UNSHIFT(SEND_STRING(MAC_LEFT_DOUBLE_QUOTE));
+                } else if (host_os == OS_WIN) {
+                    UNSHIFT(SEND_STRING(WIN_LEFT_DOUBLE_QUOTE));
+                }
+            }
         } else if (state->count == 2) {
-            rgb_matrix_step_reverse();
+            if (!SHIFTED) {
+                if (host_os == OS_MAC) {
+                    SEND_STRING(MAC_RGHT_SINGLE_QUOTE);
+                } else if (host_os == OS_WIN) {
+                    SEND_STRING(WIN_RGHT_SINGLE_QUOTE);
+                }
+            } else {
+                if (host_os == OS_MAC) {
+                    UNSHIFT(SEND_STRING(MAC_RGHT_DOUBLE_QUOTE));
+                } else if (host_os == OS_WIN) {
+                    UNSHIFT(SEND_STRING(WIN_RGHT_DOUBLE_QUOTE));
+                }
+            }
         }
-        reset_tap_dance(state);
     }
 }
 
 // Tap Dance Definitions
 tap_dance_action_t tap_dance_actions[] = {
-    [TD_RGB]     = ACTION_TAP_DANCE_FN(dance_cycle_rgb),
     [TD_SSHFT]   = ACTION_TAP_DANCE_FN_ADVANCED(NULL, supershift_finished, supershift_reset),
     [TD_AIRPODS] = ACTION_TAP_DANCE_FN(dance_airpods),
+    [TD_SMRTQUO] = ACTION_TAP_DANCE_FN(dance_smartquote),
     // Add other definitions here
 };
-
-// Determines what actual keycodes to send for movement and modification keys
-enum host_os_types { OS_MAC, OS_WIN };
-enum host_os_types host_os;
 
 // clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [INS] = LAYOUT_moonlander(
-    KC_ESC,         KC_1,    KC_2,    KC_3,    KC_4,          KC_5,       CW_TOGG, TT(NUM), KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_EQL,
+    KC_ESC,         KC_1,    KC_2,    KC_3,    KC_4,          KC_5,       CW_TOGG, TT(SYM), KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_EQL,
     LT(MOV,KC_TAB), KC_Q,    KC_W,    KC_E,    KC_R,          KC_T,       KC_LBRC, KC_RBRC, KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_BSPC,
     LCTL_T(KC_ESC), KC_A,    KC_S,    KC_D,    KC_F,          KC_G,       KC_LPRN, KC_RPRN, KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_ENT,
     TD(TD_SSHFT),   KC_Z,    KC_X,    KC_C,    KC_V,          KC_B,                                 KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, RSFT_T(KC_MINS),
-    LT(NUM,KC_GRV), MO(FUN), KC_LCTL, KC_LALT, KC_LGUI,       TD(TD_AIRPODS),                       TO(GAM), KC_LEFT, KC_DOWN, KC_UP,   KC_RGHT, KC_QUOT,
-    KC_SPC,         MO(NUM), MO(LGT),                                                                           KC_RGUI, KC_BSLS, KC_SPC
+    LT(SYM,KC_GRV), MO(FUN), KC_LCTL, KC_LALT, KC_LGUI,       TD(TD_AIRPODS),                       TO(GAM), KC_LEFT, KC_DOWN, KC_UP,   KC_RGHT, KC_QUOT,
+    KC_SPC,         MO(SYM), MO(LGT),                                                                           KC_RGUI, KC_BSLS, KC_SPC
     ),
 
     [GAM] = LAYOUT_moonlander(
@@ -128,12 +162,12 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     _______, _______, _______,                                                                  _______, _______, _______
     ),
 
-    [NUM] = LAYOUT_moonlander(
+    [SYM] = LAYOUT_moonlander(
     _______, _______, _______, _______, _______, _______, _______, _______, _______, KC_7,    KC_8,    KC_9,    _______, _______,
     _______, _______, _______, _______, _______, _______, _______, _______, _______, KC_4,    KC_5,    KC_6,    _______, KC_DEL,
     _______, _______, _______, _______, _______, _______, _______, _______, _______, KC_1,    KC_2,    KC_3,    _______, _______,
-    _______, _______, _______, _______, _______, _______,                           _______, _______, KC_0,    _______, _______, _______,
-    _______, _______, _______, _______, _______, _______,                           _______, _______, _______, _______, _______, _______,
+    _______, _______, _______, _______, _______, _______,                           _______, _______, KC_0,    _______, KC_BSLS, _______,
+    _______, _______, _______, _______, _______, _______,                           _______, _______, _______, _______, _______, TD(TD_SMRTQUO),
     _______, _______, _______,                                                                  _______, _______, _______
     ),
 
@@ -191,8 +225,11 @@ void keyboard_post_init_user(void) {
     set_tempo(150);
 }
 
-uint8_t prev_rgb_mode           = 0;
-bool    prev_rgb_mode_has_value = false;
+static uint8_t prev_rgb_mode           = 0;
+static bool    prev_rgb_mode_has_value = false;
+
+static HSV  prev_rgb_hsv           = {0, 0, 0};
+static bool prev_rgb_hsv_has_value = false;
 
 layer_state_t layer_state_set_user(layer_state_t state) {
     if (IS_LAYER_ON_STATE(state, GAM)) {
@@ -205,6 +242,21 @@ layer_state_t layer_state_set_user(layer_state_t state) {
         rgb_matrix_mode(prev_rgb_mode);
         prev_rgb_mode           = 0;
         prev_rgb_mode_has_value = false;
+    }
+
+    // When going into another layer, dim the underlying RGB animation so the
+    // key highlights (as set below in rgb_matrix_indicators_advanced_user)
+    // really stand out. But don't do this for the lighting layer, since we want those changes to persist!
+    if (get_highest_layer(state) != INS && get_highest_layer(state) != LGT && !prev_rgb_hsv_has_value) {
+        HSV previous           = rgb_matrix_get_hsv();
+        prev_rgb_hsv.h         = previous.h;
+        prev_rgb_hsv.s         = previous.s;
+        prev_rgb_hsv.v         = previous.v;
+        prev_rgb_hsv_has_value = true;
+        rgb_matrix_sethsv_noeeprom(previous.h, previous.s, previous.v > 60 ? previous.v - 60 : 0);
+    } else if (get_highest_layer(state) == INS && prev_rgb_hsv_has_value) {
+        rgb_matrix_sethsv(prev_rgb_hsv.h, prev_rgb_hsv.s, prev_rgb_hsv.v);
+        prev_rgb_hsv_has_value = false;
     }
     return state;
 }
@@ -270,16 +322,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     }
     return true;
 }
-
-// Helpers for checking shift state and temporarily unshifting
-#define SHIFTED (get_mods() & MOD_MASK_SHIFT)
-#define UNSHIFT(...)                   \
-    {                                  \
-        uint8_t prevmods = get_mods(); \
-        del_mods(MOD_MASK_SHIFT);      \
-        __VA_ARGS__;                   \
-        set_mods(prevmods);            \
-    }
 
 // Macro for sending an alternative (unshifted) key sequence when shifted.
 #define HJKL_MOVEMENT(shifted)             \
