@@ -32,5 +32,6 @@
 // Tapping configuration
 #define TAPPING_FORCE_HOLD
 #undef IGNORE_MOD_TAP_INTERRUPT
-#define TAPPING_TERM 200
+#define TAPPING_TERM 175
 #define HOLD_ON_OTHER_KEY_PRESS
+#define QUICK_TAP_TERM 120
