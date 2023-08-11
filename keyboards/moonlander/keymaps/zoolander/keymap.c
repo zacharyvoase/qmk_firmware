@@ -1,6 +1,7 @@
 /* Copyright 2020 ZSA Technology Labs, Inc <@zsa>
  * Copyright 2020 Jack Humbert <jack.humb@gmail.com>
  * Copyright 2020 Christopher Courtney, aka Drashna Jael're  (@drashna) <drashna@live.com>
+ * Copyright 2023 Zachary Voase <zack@meat.io>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
