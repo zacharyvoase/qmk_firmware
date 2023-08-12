@@ -247,14 +247,14 @@ layer_state_t layer_state_set_user(layer_state_t state) {
     // When going into another layer, dim the underlying RGB animation so the
     // key highlights (as set below in rgb_matrix_indicators_advanced_user)
     // really stand out. But don't do this for the lighting layer, since we want those changes to persist!
-    if (get_highest_layer(state) != INS && get_highest_layer(state) != LGT && !prev_rgb_hsv_has_value) {
+    if (get_highest_layer(state) > GAM && get_highest_layer(state) != LGT && !prev_rgb_hsv_has_value) {
         HSV previous           = rgb_matrix_get_hsv();
         prev_rgb_hsv.h         = previous.h;
         prev_rgb_hsv.s         = previous.s;
         prev_rgb_hsv.v         = previous.v;
         prev_rgb_hsv_has_value = true;
         rgb_matrix_sethsv_noeeprom(previous.h, previous.s, previous.v > 60 ? previous.v - 60 : 0);
-    } else if (get_highest_layer(state) == INS && prev_rgb_hsv_has_value) {
+    } else if (get_highest_layer(state) <= GAM && prev_rgb_hsv_has_value) {
         rgb_matrix_sethsv(prev_rgb_hsv.h, prev_rgb_hsv.s, prev_rgb_hsv.v);
         prev_rgb_hsv_has_value = false;
     }
