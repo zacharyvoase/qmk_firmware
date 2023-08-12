@@ -103,7 +103,7 @@ void dance_airpods(tap_dance_state_t *state, void *user_data) {
 #define WIN_LEFT_DOUBLE_QUOTE SS_LALT(SS_TAP(X_KP_0) SS_TAP(X_KP_1) SS_TAP(X_KP_4) SS_TAP(X_KP_7))
 #define WIN_RGHT_DOUBLE_QUOTE SS_LALT(SS_TAP(X_KP_0) SS_TAP(X_KP_1) SS_TAP(X_KP_4) SS_TAP(X_KP_8))
 #define WIN_EN_DASH SS_LALT(SS_TAP(X_KP_0) SS_TAP(X_KP_1) SS_TAP(X_KP_5) SS_TAP(X_KP_0))
-#define WIN_EM_DASH SS_LALT(SS_TAP(X_KP_0) SS_TAP(X_KP_1) SS_TAP(X_KP_5) SS_TAP(X_KP_0))
+#define WIN_EM_DASH SS_LALT(SS_TAP(X_KP_0) SS_TAP(X_KP_1) SS_TAP(X_KP_5) SS_TAP(X_KP_1))
 
 void dance_smartquote(tap_dance_state_t *state, void *user_data) {
     if (state->finished) {
