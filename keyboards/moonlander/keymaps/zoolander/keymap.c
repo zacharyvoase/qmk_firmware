@@ -76,6 +76,7 @@ enum {
     TD_SSHFT = 0, // Supershift
     TD_AIRPODS,   // Airpods-style media key
     TD_SMRTQUO,   // Smart quote key
+    TD_SMRTDSH,   // Smart dash key
 };
 
 void dance_airpods(tap_dance_state_t *state, void *user_data) {
@@ -95,10 +96,14 @@ void dance_airpods(tap_dance_state_t *state, void *user_data) {
 #define MAC_RGHT_SINGLE_QUOTE SS_LALT(SS_LSFT("]"))
 #define MAC_LEFT_DOUBLE_QUOTE SS_LALT("[")
 #define MAC_RGHT_DOUBLE_QUOTE SS_LALT(SS_LSFT("["))
-#define WIN_LEFT_SINGLE_QUOTE SS_LALT("0145")
-#define WIN_RGHT_SINGLE_QUOTE SS_LALT("0146")
-#define WIN_LEFT_DOUBLE_QUOTE SS_LALT("0147")
-#define WIN_RGHT_DOUBLE_QUOTE SS_LALT("0148")
+#define MAC_EN_DASH SS_LALT("-")
+#define MAC_EM_DASH SS_LALT(SS_LSFT("-"))
+#define WIN_LEFT_SINGLE_QUOTE SS_LALT(SS_TAP(X_KP_0) SS_TAP(X_KP_1) SS_TAP(X_KP_4) SS_TAP(X_KP_5))
+#define WIN_RGHT_SINGLE_QUOTE SS_LALT(SS_TAP(X_KP_0) SS_TAP(X_KP_1) SS_TAP(X_KP_4) SS_TAP(X_KP_6))
+#define WIN_LEFT_DOUBLE_QUOTE SS_LALT(SS_TAP(X_KP_0) SS_TAP(X_KP_1) SS_TAP(X_KP_4) SS_TAP(X_KP_7))
+#define WIN_RGHT_DOUBLE_QUOTE SS_LALT(SS_TAP(X_KP_0) SS_TAP(X_KP_1) SS_TAP(X_KP_4) SS_TAP(X_KP_8))
+#define WIN_EN_DASH SS_LALT(SS_TAP(X_KP_0) SS_TAP(X_KP_1) SS_TAP(X_KP_5) SS_TAP(X_KP_0))
+#define WIN_EM_DASH SS_LALT(SS_TAP(X_KP_0) SS_TAP(X_KP_1) SS_TAP(X_KP_5) SS_TAP(X_KP_0))
 
 void dance_smartquote(tap_dance_state_t *state, void *user_data) {
     if (state->finished) {
@@ -134,11 +139,28 @@ void dance_smartquote(tap_dance_state_t *state, void *user_data) {
     }
 }
 
+void dance_smartdash(tap_dance_state_t *state, void *user_data) {
+    if (state->count == 1) {
+        if (host_os == OS_MAC) {
+            SEND_STRING(MAC_EN_DASH);
+        } else if (host_os == OS_WIN) {
+            SEND_STRING(WIN_EN_DASH);
+        }
+    } else if (state->count == 2) {
+        if (host_os == OS_MAC) {
+            SEND_STRING(MAC_EM_DASH);
+        } else if (host_os == OS_WIN) {
+            SEND_STRING(WIN_EM_DASH);
+        }
+    }
+}
+
 // Tap Dance Definitions
 tap_dance_action_t tap_dance_actions[] = {
     [TD_SSHFT]   = ACTION_TAP_DANCE_FN_ADVANCED(NULL, supershift_finished, supershift_reset),
     [TD_AIRPODS] = ACTION_TAP_DANCE_FN(dance_airpods),
     [TD_SMRTQUO] = ACTION_TAP_DANCE_FN(dance_smartquote),
+    [TD_SMRTDSH] = ACTION_TAP_DANCE_FN(dance_smartdash),
     // Add other definitions here
 };
 
@@ -166,7 +188,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     _______, _______, _______, _______, _______, _______, _______, _______, _______, KC_7,    KC_8,    KC_9,    _______, _______,
     _______, _______, _______, _______, _______, _______, _______, _______, _______, KC_4,    KC_5,    KC_6,    _______, KC_DEL,
     _______, _______, _______, _______, _______, _______, _______, _______, _______, KC_1,    KC_2,    KC_3,    _______, _______,
-    _______, _______, _______, _______, _______, _______,                           _______, _______, KC_0,    _______, KC_BSLS, _______,
+    _______, _______, _______, _______, _______, _______,                           _______, _______, KC_0,    _______, KC_BSLS, TD(TD_SMRTDSH),
     _______, _______, _______, _______, _______, _______,                           _______, _______, _______, _______, _______, TD(TD_SMRTQUO),
     _______, _______, _______,                                                                  _______, _______, _______
     ),
