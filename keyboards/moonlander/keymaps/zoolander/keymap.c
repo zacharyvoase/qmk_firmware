@@ -285,7 +285,12 @@ layer_state_t layer_state_set_user(layer_state_t state) {
 
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     uint8_t layer = get_highest_layer(layer_state);
-    if (layer > GAM) {
+    if (layer == GAM) {
+        rgb_matrix_set_color(7, 255, 255, 255);
+        rgb_matrix_set_color(11, 255, 255, 255);
+        rgb_matrix_set_color(12, 255, 255, 255);
+        rgb_matrix_set_color(17, 255, 255, 255);
+    } else if (layer > GAM) {
         for (uint8_t row = 0; row < MATRIX_ROWS; ++row) {
             for (uint8_t col = 0; col < MATRIX_COLS; ++col) {
                 uint8_t index = g_led_config.matrix_co[row][col];
