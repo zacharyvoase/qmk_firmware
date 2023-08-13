@@ -4,7 +4,6 @@
 #include "keycodes.h"
 #include "process_caps_word.h"
 #include "quantum.h"
-#include QMK_KEYBOARD_H
 
 typedef enum { SINGLE_TAP = 0, SINGLE_HOLD, DOUBLE_SINGLE_TAP } supershift_state_t;
 

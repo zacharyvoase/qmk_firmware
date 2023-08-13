@@ -20,19 +20,20 @@
 #include QMK_KEYBOARD_H
 
 #include "action_layer.h"
+#include "audio.h"
 #include "color.h"
 #include "config.h"
+#include "keycodes.h"
 #include "keymap.h"
 #include "process_tap_dance.h"
 #include "quantum.h"
-#include "rgb_matrix.h"
 #include "rgb_matrix_types.h"
-#include "audio.h"
-#include "keycodes.h"
-#include "version.h"
+#include "rgb_matrix.h"
+#include "shiftstate.h"
 #include "songs.h"
 #include "supershift.h"
-#include "shiftstate.h"
+#include "version.h"
+#include "win_alt_code.h"
 
 enum layers {
     INS,   // Base layer (Vim insert mode)
@@ -98,12 +99,13 @@ void dance_airpods(tap_dance_state_t *state, void *user_data) {
 #define MAC_RGHT_DOUBLE_QUOTE SS_LALT(SS_LSFT("["))
 #define MAC_EN_DASH SS_LALT("-")
 #define MAC_EM_DASH SS_LALT(SS_LSFT("-"))
-#define WIN_LEFT_SINGLE_QUOTE SS_LALT(SS_TAP(X_KP_0) SS_TAP(X_KP_1) SS_TAP(X_KP_4) SS_TAP(X_KP_5))
-#define WIN_RGHT_SINGLE_QUOTE SS_LALT(SS_TAP(X_KP_0) SS_TAP(X_KP_1) SS_TAP(X_KP_4) SS_TAP(X_KP_6))
-#define WIN_LEFT_DOUBLE_QUOTE SS_LALT(SS_TAP(X_KP_0) SS_TAP(X_KP_1) SS_TAP(X_KP_4) SS_TAP(X_KP_7))
-#define WIN_RGHT_DOUBLE_QUOTE SS_LALT(SS_TAP(X_KP_0) SS_TAP(X_KP_1) SS_TAP(X_KP_4) SS_TAP(X_KP_8))
-#define WIN_EN_DASH SS_LALT(SS_TAP(X_KP_0) SS_TAP(X_KP_1) SS_TAP(X_KP_5) SS_TAP(X_KP_0))
-#define WIN_EM_DASH SS_LALT(SS_TAP(X_KP_0) SS_TAP(X_KP_1) SS_TAP(X_KP_5) SS_TAP(X_KP_1))
+
+#define WIN_LEFT_SINGLE_QUOTE SS_TAP(X_KP_0) SS_TAP(X_KP_1) SS_TAP(X_KP_4) SS_TAP(X_KP_5)
+#define WIN_RGHT_SINGLE_QUOTE SS_TAP(X_KP_0) SS_TAP(X_KP_1) SS_TAP(X_KP_4) SS_TAP(X_KP_6)
+#define WIN_LEFT_DOUBLE_QUOTE SS_TAP(X_KP_0) SS_TAP(X_KP_1) SS_TAP(X_KP_4) SS_TAP(X_KP_7)
+#define WIN_RGHT_DOUBLE_QUOTE SS_TAP(X_KP_0) SS_TAP(X_KP_1) SS_TAP(X_KP_4) SS_TAP(X_KP_8)
+#define WIN_EN_DASH SS_TAP(X_KP_0) SS_TAP(X_KP_1) SS_TAP(X_KP_5) SS_TAP(X_KP_0)
+#define WIN_EM_DASH SS_TAP(X_KP_0) SS_TAP(X_KP_1) SS_TAP(X_KP_5) SS_TAP(X_KP_1)
 
 void dance_smartquote(tap_dance_state_t *state, void *user_data) {
     if (state->finished) {
@@ -112,13 +114,13 @@ void dance_smartquote(tap_dance_state_t *state, void *user_data) {
                 if (host_os == OS_MAC) {
                     SEND_STRING(MAC_LEFT_SINGLE_QUOTE);
                 } else if (host_os == OS_WIN) {
-                    SEND_STRING(WIN_LEFT_SINGLE_QUOTE);
+                    SEND_WIN_ALT_CODE(WIN_LEFT_SINGLE_QUOTE);
                 }
             } else {
                 if (host_os == OS_MAC) {
                     UNSHIFT(SEND_STRING(MAC_LEFT_DOUBLE_QUOTE));
                 } else if (host_os == OS_WIN) {
-                    UNSHIFT(SEND_STRING(WIN_LEFT_DOUBLE_QUOTE));
+                    UNSHIFT(SEND_WIN_ALT_CODE(WIN_LEFT_DOUBLE_QUOTE));
                 }
             }
         } else if (state->count == 2) {
@@ -126,13 +128,13 @@ void dance_smartquote(tap_dance_state_t *state, void *user_data) {
                 if (host_os == OS_MAC) {
                     SEND_STRING(MAC_RGHT_SINGLE_QUOTE);
                 } else if (host_os == OS_WIN) {
-                    SEND_STRING(WIN_RGHT_SINGLE_QUOTE);
+                    SEND_WIN_ALT_CODE(WIN_RGHT_SINGLE_QUOTE);
                 }
             } else {
                 if (host_os == OS_MAC) {
                     UNSHIFT(SEND_STRING(MAC_RGHT_DOUBLE_QUOTE));
                 } else if (host_os == OS_WIN) {
-                    UNSHIFT(SEND_STRING(WIN_RGHT_DOUBLE_QUOTE));
+                    UNSHIFT(SEND_WIN_ALT_CODE(WIN_RGHT_DOUBLE_QUOTE));
                 }
             }
         }
