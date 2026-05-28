@@ -32,3 +32,34 @@
 #ifndef RAW_USAGE_ID
 #    define RAW_USAGE_ID 0x61
 #endif
+
+/////////////////////
+// macOS Scroll Resolution (units per inch)
+// Lower value = more sensitive scrolling (default: 200 for 2x Apple sensitivity)
+// Apple trackpads use 400, but smaller trackpads need lower values
+
+#ifdef POINTING_DEVICE_MACOS_SCROLL_RESOLUTION
+#    ifndef POINTING_DEVICE_MACOS_SCROLL_UNITS_PER_INCH
+#        define POINTING_DEVICE_MACOS_SCROLL_UNITS_PER_INCH 200
+#    endif
+#endif
+
+/////////////////////
+// Hires Scroll Defaults
+
+#ifdef POINTING_DEVICE_HIRES_SCROLL_ENABLE
+#    ifdef POINTING_DEVICE_HIRES_SCROLL_MULTIPLIER
+#        if POINTING_DEVICE_HIRES_SCROLL_MULTIPLIER > 127 || POINTING_DEVICE_HIRES_SCROLL_MULTIPLIER < 1
+#            error "POINTING_DEVICE_HIRES_SCROLL_MULTIPLIER must be between 1 and 127, inclusive!"
+#        endif
+#    else
+#        define POINTING_DEVICE_HIRES_SCROLL_MULTIPLIER 120
+#    endif
+#    ifdef POINTING_DEVICE_HIRES_SCROLL_EXPONENT
+#        if POINTING_DEVICE_HIRES_SCROLL_EXPONENT > 127 || POINTING_DEVICE_HIRES_SCROLL_EXPONENT < 0
+#            error "POINTING_DEVICE_HIRES_SCROLL_EXPONENT must be between 0 and 127, inclusive!"
+#        endif
+#    else
+#        define POINTING_DEVICE_HIRES_SCROLL_EXPONENT 0
+#    endif
+#endif

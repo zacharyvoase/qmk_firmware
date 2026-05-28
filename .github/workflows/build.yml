@@ -16,20 +16,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        keyboard:
-          - ergodox_ez
-          - ergodox_ez/shine
-          - ergodox_ez/glow
-          - moonlander
-          - planck/ez
-          - planck/ez/glow
         keymap:
           - default
           - oryx
 
     steps:
     - name: Checkout QMK Firmware
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         fetch-depth: 1
         persist-credentials: false
@@ -38,17 +31,4 @@ jobs:
     - name: Build
       id: build
       run: |
-        qmk compile -kb ${{ matrix.keyboard}} -km ${{ matrix.keymap }}
-
-        TARGET="$(echo "${{ matrix.keyboard }}" | sed 's#/#_#g')_${{matrix.keymap}}"
-        echo "name=artifact-name::${TARGET}" >> $GITHUB_OUTPUT
-        echo "Artifact-name: ${{ steps.build.outputs.artifact-name }}"
-
-    - name: Archive artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: "${{ steps.build.outputs.artifact-name }}"
-        path: |
-          *.hex
-          *.bin
-      continue-on-error: true
+        qmk mass-compile -f manufacturer="ZSA Technology Labs" -km ${{ matrix.keymap }} -e SKIP_GIT=1
