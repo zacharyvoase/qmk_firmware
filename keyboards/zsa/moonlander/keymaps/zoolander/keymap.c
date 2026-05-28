@@ -22,13 +22,12 @@
 #include "action_layer.h"
 #include "audio.h"
 #include "color.h"
-#include "config.h"
 #include "keycodes.h"
 #include "keymap.h"
 #include "process_tap_dance.h"
 #include "quantum.h"
-#include "rgb_matrix_types.h"
 #include "rgb_matrix.h"
+#include "rgb_matrix_types.h"
 #include "shiftstate.h"
 #include "songs.h"
 #include "supershift.h"
@@ -36,14 +35,13 @@
 #include "win_alt_code.h"
 
 enum layers {
-    INS,   // Base layer (Vim insert mode)
-    GAM,   // Gaming (no tap dances/holds, for low-latency input)
-    SYM,   // Symbols, Smart quotes, Numpad, turn backspace into delete
-    FUN,   // Function (F-keys, media, other meta stuff)
-    MOV,   // Movement (Vim normal mode)
-    SEL,   // Selection (Vim visual mode)
-    LGT,   // RGB lights modification layer
-    BLANK, // Blank, just exists as a template for copying all the ______ things into place
+    INS, // Base layer (Vim insert mode)
+    GAM, // Gaming (no tap dances/holds, for low-latency input)
+    SYM, // Symbols, smart quotes, numpad, turn backspace into delete
+    FUN, // Function (F-keys, media, other meta stuff)
+    MOV, // Movement (Vim normal mode)
+    SEL, // Selection (Vim visual mode)
+    LGT, // RGB lights modification layer
 };
 
 // Determines what actual keycodes to send for smart quote, movement and modification keys
@@ -63,13 +61,12 @@ enum custom_keycodes {
     Z__PEND, // paragraph end
     Z__VIMG, // g => start of document / G => end of document (same as Vim)
     Z__VIMO, // o => end-of-line, return / O => start-of-line, return, up (similar to o/O in Vim)
-    Z____UP, // up, or page up if shift is held
     // Selection/modification keys
     Z_CHNGE, // Change (deletes selected text, goes back to 'insert' mode)
     Z___CUT, // Cmd-X on mac, Ctrl-X on Windows
     Z__COPY, // Cmd-C on mac, Ctrl-C on Windows
     Z_PASTE, // Cmd-V on mac, Ctrl-V on Windows
-    Z_END,
+    Z_END,   // Sentinel: must remain last for indicator range checks.
 };
 
 // Tap Dance Declarations
@@ -81,17 +78,96 @@ enum {
     TD_SMRTELL,   // Smart ellipsis key
 };
 
+// Per-OS keystroke sequences. One slot per semantic action; the runtime
+// switches between mac_bindings and win_bindings based on host_os.
+typedef struct {
+    // Edge-of-line jumps (sent when KC_LEFT/RIGHT is shifted on the MOV layer).
+    const char *line_home_jump;
+    const char *line_end_jump;
+    // Page jumps (sent when KC_UP/DOWN is shifted on the MOV layer).
+    const char *page_up;
+    const char *page_down;
+    // Word-level cursor moves.
+    const char *word_forward;
+    const char *word_back;
+    // Line-level cursor moves.
+    const char *line_start;
+    const char *line_end;
+    // Paragraph-level cursor moves.
+    const char *para_start;
+    const char *para_end;
+    // Document-level cursor moves (Vim g / G).
+    const char *doc_start;
+    const char *doc_end;
+    // Vim o / O — open a new line below / above and start typing on it.
+    const char *open_below;
+    const char *open_above;
+    // Clipboard operations.
+    const char *cut;
+    const char *copy;
+    const char *paste;
+} os_bindings_t;
+
+static const os_bindings_t mac_bindings = {
+    .line_home_jump = SS_TAP(X_HOME),
+    .line_end_jump  = SS_TAP(X_END),
+    .page_up        = SS_TAP(X_PAGE_UP),
+    .page_down      = SS_TAP(X_PAGE_DOWN),
+    .word_forward   = SS_LALT(SS_TAP(X_RIGHT)),
+    .word_back      = SS_LALT(SS_TAP(X_LEFT)),
+    .line_start     = SS_LGUI(SS_TAP(X_LEFT)),
+    .line_end       = SS_LGUI(SS_TAP(X_RIGHT)),
+    .para_start     = SS_LALT(SS_TAP(X_UP)),
+    .para_end       = SS_LALT(SS_TAP(X_DOWN)),
+    .doc_start      = SS_LCMD(SS_TAP(X_UP)),
+    .doc_end        = SS_LCMD(SS_TAP(X_DOWN)),
+    .open_below     = SS_LCTL("e") SS_TAP(X_ENTER),
+    .open_above     = SS_LCTL("a") SS_TAP(X_ENTER) SS_TAP(X_UP),
+    .cut            = SS_LCMD("x"),
+    .copy           = SS_LCMD("c"),
+    .paste          = SS_LCMD("v"),
+};
+
+static const os_bindings_t win_bindings = {
+    .line_home_jump = SS_LCTL(SS_TAP(X_HOME)),
+    .line_end_jump  = SS_LCTL(SS_TAP(X_END)),
+    .page_up        = SS_LCTL(SS_TAP(X_PAGE_UP)),
+    .page_down      = SS_LCTL(SS_TAP(X_PAGE_DOWN)),
+    .word_forward   = SS_LCTL(SS_TAP(X_RIGHT)),
+    .word_back      = SS_LCTL(SS_TAP(X_LEFT)),
+    .line_start     = SS_TAP(X_HOME),
+    .line_end       = SS_TAP(X_END),
+    .para_start     = SS_LCTL(SS_TAP(X_UP)),
+    .para_end       = SS_LCTL(SS_TAP(X_DOWN)),
+    .doc_start      = SS_LCTL(SS_TAP(X_HOME)),
+    .doc_end        = SS_LCTL(SS_TAP(X_END)),
+    .open_below     = SS_TAP(X_END) SS_TAP(X_ENTER),
+    .open_above     = SS_TAP(X_HOME) SS_TAP(X_ENTER) SS_TAP(X_UP),
+    .cut            = SS_LCTL("x"),
+    .copy           = SS_LCTL("c"),
+    .paste          = SS_LCTL("v"),
+};
+
+static const os_bindings_t *bindings(void) {
+    return (host_os == OS_MAC) ? &mac_bindings : &win_bindings;
+}
+
+// Wraps a runtime keystroke sequence in a left-shift mod for the SEL layer.
+// Can't use SS_LSFT(...) here because that macro only operates on string literals.
+static void send_shifted(const char *seq) {
+    register_code(KC_LEFT_SHIFT);
+    send_string(seq);
+    unregister_code(KC_LEFT_SHIFT);
+}
+
 void dance_airpods(tap_dance_state_t *state, void *user_data) {
-    if (state->finished) {
-        if (state->count == 1) {
-            SEND_STRING(SS_TAP(X_MEDIA_PLAY_PAUSE));
-        } else if (state->count == 2) {
-            SEND_STRING(SS_TAP(X_MEDIA_NEXT_TRACK));
-        } else if (state->count == 3) {
-            SEND_STRING(SS_TAP(X_MEDIA_PREV_TRACK));
-        }
-        reset_tap_dance(state);
+    if (!state->finished) return;
+    switch (state->count) {
+        case 1: SEND_STRING(SS_TAP(X_MEDIA_PLAY_PAUSE)); break;
+        case 2: SEND_STRING(SS_TAP(X_MEDIA_NEXT_TRACK)); break;
+        case 3: SEND_STRING(SS_TAP(X_MEDIA_PREV_TRACK)); break;
     }
+    reset_tap_dance(state);
 }
 
 #define MAC_LEFT_SINGLE_QUOTE SS_LALT("]")
@@ -111,34 +187,33 @@ void dance_airpods(tap_dance_state_t *state, void *user_data) {
 #define WIN_ELLIPSIS SS_TAP(X_KP_0) SS_TAP(X_KP_1) SS_TAP(X_KP_3) SS_TAP(X_KP_3)
 
 void dance_smartquote(tap_dance_state_t *state, void *user_data) {
-    if (state->finished) {
-        if (state->count == 1) {
-            if (!SHIFTED) {
-                if (host_os == OS_MAC) {
-                    SEND_STRING(MAC_LEFT_SINGLE_QUOTE);
-                } else if (host_os == OS_WIN) {
-                    SEND_WIN_ALT_CODE(WIN_LEFT_SINGLE_QUOTE);
-                }
+    if (!state->finished) return;
+    if (state->count == 1) {
+        if (!SHIFTED) {
+            if (host_os == OS_MAC) {
+                SEND_STRING(MAC_LEFT_SINGLE_QUOTE);
             } else {
-                if (host_os == OS_MAC) {
-                    UNSHIFT(SEND_STRING(MAC_LEFT_DOUBLE_QUOTE));
-                } else if (host_os == OS_WIN) {
-                    UNSHIFT(SEND_WIN_ALT_CODE(WIN_LEFT_DOUBLE_QUOTE));
-                }
+                SEND_WIN_ALT_CODE(WIN_LEFT_SINGLE_QUOTE);
             }
-        } else if (state->count == 2) {
-            if (!SHIFTED) {
-                if (host_os == OS_MAC) {
-                    SEND_STRING(MAC_RGHT_SINGLE_QUOTE);
-                } else if (host_os == OS_WIN) {
-                    SEND_WIN_ALT_CODE(WIN_RGHT_SINGLE_QUOTE);
-                }
+        } else {
+            if (host_os == OS_MAC) {
+                UNSHIFT(SEND_STRING(MAC_LEFT_DOUBLE_QUOTE));
             } else {
-                if (host_os == OS_MAC) {
-                    UNSHIFT(SEND_STRING(MAC_RGHT_DOUBLE_QUOTE));
-                } else if (host_os == OS_WIN) {
-                    UNSHIFT(SEND_WIN_ALT_CODE(WIN_RGHT_DOUBLE_QUOTE));
-                }
+                UNSHIFT(SEND_WIN_ALT_CODE(WIN_LEFT_DOUBLE_QUOTE));
+            }
+        }
+    } else if (state->count == 2) {
+        if (!SHIFTED) {
+            if (host_os == OS_MAC) {
+                SEND_STRING(MAC_RGHT_SINGLE_QUOTE);
+            } else {
+                SEND_WIN_ALT_CODE(WIN_RGHT_SINGLE_QUOTE);
+            }
+        } else {
+            if (host_os == OS_MAC) {
+                UNSHIFT(SEND_STRING(MAC_RGHT_DOUBLE_QUOTE));
+            } else {
+                UNSHIFT(SEND_WIN_ALT_CODE(WIN_RGHT_DOUBLE_QUOTE));
             }
         }
     }
@@ -146,27 +221,15 @@ void dance_smartquote(tap_dance_state_t *state, void *user_data) {
 
 void dance_smartdash(tap_dance_state_t *state, void *user_data) {
     if (state->count == 1) {
-        if (host_os == OS_MAC) {
-            SEND_STRING(MAC_EN_DASH);
-        } else if (host_os == OS_WIN) {
-            SEND_STRING(WIN_EN_DASH);
-        }
+        SEND_STRING(host_os == OS_MAC ? MAC_EN_DASH : WIN_EN_DASH);
     } else if (state->count == 2) {
-        if (host_os == OS_MAC) {
-            SEND_STRING(MAC_EM_DASH);
-        } else if (host_os == OS_WIN) {
-            SEND_STRING(WIN_EM_DASH);
-        }
+        SEND_STRING(host_os == OS_MAC ? MAC_EM_DASH : WIN_EM_DASH);
     }
 }
 
 void dance_smartellipsis(tap_dance_state_t *state, void *user_data) {
     if (state->count == 1) {
-        if (host_os == OS_MAC) {
-            SEND_STRING(MAC_ELLIPSIS);
-        } else if (host_os == OS_WIN) {
-            SEND_STRING(WIN_ELLIPSIS);
-        }
+        SEND_STRING(host_os == OS_MAC ? MAC_ELLIPSIS : WIN_ELLIPSIS);
     }
 }
 
@@ -177,7 +240,6 @@ tap_dance_action_t tap_dance_actions[] = {
     [TD_SMRTQUO] = ACTION_TAP_DANCE_FN(dance_smartquote),
     [TD_SMRTDSH] = ACTION_TAP_DANCE_FN(dance_smartdash),
     [TD_SMRTELL] = ACTION_TAP_DANCE_FN(dance_smartellipsis),
-    // Add other definitions here
 };
 
 // clang-format off
@@ -244,17 +306,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,                           XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
     XXXXXXX, XXXXXXX, XXXXXXX,                                                                  XXXXXXX, XXXXXXX, RGB_TOG
     ),
-
-    [BLANK] = LAYOUT_moonlander(
-    _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
-    _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
-    _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
-    _______, _______, _______, _______, _______, _______,                           _______, _______, _______, _______, _______, _______,
-    _______, _______, _______, _______, _______, _______,                           _______, _______, _______, _______, _______, _______,
-    _______, _______, _______,                                                                  _______, _______, _______
-    ),
 };
-
 // clang-format on
 
 void keyboard_post_init_user(void) {
@@ -263,38 +315,48 @@ void keyboard_post_init_user(void) {
     set_tempo(150);
 }
 
-static uint8_t prev_rgb_mode           = 0;
-static bool    prev_rgb_mode_has_value = false;
+// Tiny optional<T>-style holders so the saved animation/color don't drift
+// out of sync with their has_value flags.
+typedef struct {
+    bool    set;
+    uint8_t mode;
+} saved_mode_t;
 
-static HSV  prev_rgb_hsv           = {0, 0, 0};
-static bool prev_rgb_hsv_has_value = false;
+typedef struct {
+    bool set;
+    HSV  hsv;
+} saved_hsv_t;
+
+static saved_mode_t saved_mode;
+static saved_hsv_t  saved_hsv;
 
 layer_state_t layer_state_set_user(layer_state_t state) {
+    uint8_t top = get_highest_layer(state);
+
+    // GAM (gaming) mode: stash the current animation, switch to spiral.
+    // Restore when leaving GAM.
     if (IS_LAYER_ON_STATE(state, GAM)) {
         if (rgb_matrix_get_mode() != RGB_MATRIX_CYCLE_SPIRAL) {
-            prev_rgb_mode           = rgb_matrix_get_mode();
-            prev_rgb_mode_has_value = true;
+            saved_mode.mode = rgb_matrix_get_mode();
+            saved_mode.set  = true;
             rgb_matrix_mode(RGB_MATRIX_CYCLE_SPIRAL);
         }
-    } else if (prev_rgb_mode_has_value) {
-        rgb_matrix_mode(prev_rgb_mode);
-        prev_rgb_mode           = 0;
-        prev_rgb_mode_has_value = false;
+    } else if (saved_mode.set) {
+        rgb_matrix_mode(saved_mode.mode);
+        saved_mode.set = false;
     }
 
     // When going into another layer, dim the underlying RGB animation so the
-    // key highlights (as set below in rgb_matrix_indicators_advanced_user)
-    // really stand out. But don't do this for the lighting layer, since we want those changes to persist!
-    if (get_highest_layer(state) > GAM && get_highest_layer(state) != LGT && !prev_rgb_hsv_has_value) {
-        HSV previous           = rgb_matrix_get_hsv();
-        prev_rgb_hsv.h         = previous.h;
-        prev_rgb_hsv.s         = previous.s;
-        prev_rgb_hsv.v         = previous.v;
-        prev_rgb_hsv_has_value = true;
-        rgb_matrix_sethsv_noeeprom(previous.h, previous.s, previous.v > 60 ? previous.v - 60 : 0);
-    } else if (get_highest_layer(state) <= GAM && prev_rgb_hsv_has_value) {
-        rgb_matrix_sethsv(prev_rgb_hsv.h, prev_rgb_hsv.s, prev_rgb_hsv.v);
-        prev_rgb_hsv_has_value = false;
+    // key highlights (set below in rgb_matrix_indicators_advanced_user) really
+    // stand out. Skip this for the lighting layer, since we want changes there
+    // to persist.
+    if (top > GAM && top != LGT && !saved_hsv.set) {
+        saved_hsv.hsv = rgb_matrix_get_hsv();
+        saved_hsv.set = true;
+        rgb_matrix_sethsv_noeeprom(saved_hsv.hsv.h, saved_hsv.hsv.s, saved_hsv.hsv.v > 60 ? saved_hsv.hsv.v - 60 : 0);
+    } else if (top <= GAM && saved_hsv.set) {
+        rgb_matrix_sethsv(saved_hsv.hsv.h, saved_hsv.hsv.s, saved_hsv.hsv.v);
+        saved_hsv.set = false;
     }
     return state;
 }
@@ -302,36 +364,138 @@ layer_state_t layer_state_set_user(layer_state_t state) {
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     uint8_t layer = get_highest_layer(layer_state);
     if (layer == GAM) {
+        // WASD highlights in white.
         rgb_matrix_set_color(7, 255, 255, 255);
         rgb_matrix_set_color(11, 255, 255, 255);
         rgb_matrix_set_color(12, 255, 255, 255);
         rgb_matrix_set_color(17, 255, 255, 255);
-    } else if (layer > GAM) {
-        for (uint8_t row = 0; row < MATRIX_ROWS; ++row) {
-            for (uint8_t col = 0; col < MATRIX_COLS; ++col) {
-                uint8_t index = g_led_config.matrix_co[row][col];
-                if (index < led_min || index >= led_max || index == NO_LED) continue;
-                uint16_t keycode = keymap_key_to_keycode(layer, (keypos_t){col, row});
+        return false;
+    }
+    if (layer <= GAM) return false;
 
-                if (keycode >= KC_F1 && keycode <= KC_F24) {
-                    rgb_matrix_set_color(index, RGB_GREEN);
-                } else if (keycode >= Z_START && keycode <= Z_END) {
-                    rgb_matrix_set_color(index, RGB_RED);
-                } else if (keycode >= KC_AUDIO_MUTE && keycode <= KC_MEDIA_EJECT) {
-                    rgb_matrix_set_color(index, RGB_BLUE);
-                } else if (keycode >= RGB_TOG && keycode <= RGB_SPD) {
-                    rgb_matrix_set_color(index, RGB_PURPLE);
-                } else if (keycode > KC_TRANSPARENT) {
-                    rgb_matrix_set_color(index, RGB_WHITE);
-                }
+    // For non-base layers, color-code every bound key by its semantic class.
+    for (uint8_t row = 0; row < MATRIX_ROWS; ++row) {
+        for (uint8_t col = 0; col < MATRIX_COLS; ++col) {
+            uint8_t index = g_led_config.matrix_co[row][col];
+            if (index < led_min || index >= led_max || index == NO_LED) continue;
+            uint16_t keycode = keymap_key_to_keycode(layer, (keypos_t){col, row});
+
+            if (keycode >= KC_F1 && keycode <= KC_F24) {
+                rgb_matrix_set_color(index, RGB_GREEN);
+            } else if (keycode >= Z_START && keycode <= Z_END) {
+                rgb_matrix_set_color(index, RGB_RED);
+            } else if (keycode >= KC_AUDIO_MUTE && keycode <= KC_MEDIA_EJECT) {
+                rgb_matrix_set_color(index, RGB_BLUE);
+            } else if (keycode >= RGB_TOG && keycode <= RGB_SPD) {
+                rgb_matrix_set_color(index, RGB_PURPLE);
+            } else if (keycode > KC_TRANSPARENT) {
+                rgb_matrix_set_color(index, RGB_WHITE);
             }
         }
     }
     return false;
 }
 
-bool process_movement_key(uint16_t keycode);
-bool process_selection_key(uint16_t keycode);
+// MOV layer: Vim-style cursor navigation. KC_LEFT/RIGHT/UP/DOWN pass through
+// unless shift is held, in which case shift is consumed and we jump to the
+// line edge / next page instead.
+static bool process_movement_key(uint16_t keycode) {
+    const os_bindings_t *b = bindings();
+    switch (keycode) {
+        case KC_LEFT:
+            if (!SHIFTED) return true;
+            UNSHIFT(send_string(b->line_home_jump));
+            return false;
+        case KC_RIGHT:
+            if (!SHIFTED) return true;
+            UNSHIFT(send_string(b->line_end_jump));
+            return false;
+        case KC_DOWN:
+            if (!SHIFTED) return true;
+            UNSHIFT(send_string(b->page_down));
+            return false;
+        case KC_UP:
+            if (!SHIFTED) return true;
+            UNSHIFT(send_string(b->page_up));
+            return false;
+        case Z_FWORD: send_string(b->word_forward); return false;
+        case Z_BWORD: send_string(b->word_back);    return false;
+        case Z__LSTR: send_string(b->line_start);   return false;
+        case Z__LEND: send_string(b->line_end);     return false;
+        case Z__PSTR: send_string(b->para_start);   return false;
+        case Z__PEND: send_string(b->para_end);     return false;
+        case Z__VIMG:
+            if (SHIFTED) UNSHIFT(send_string(b->doc_end));
+            else         send_string(b->doc_start);
+            return false;
+        case Z__VIMO:
+            if (SHIFTED) UNSHIFT(send_string(b->open_above));
+            else         send_string(b->open_below);
+            return false;
+        case Z_PASTE: send_string(b->paste); return false;
+    }
+    return true;
+}
+
+// SEL layer: same semantic actions as MOV, but every cursor move is wrapped
+// in shift so it extends the selection. Some keys also return to INS afterwards.
+static bool process_selection_key(uint16_t keycode) {
+    const os_bindings_t *b = bindings();
+    switch (keycode) {
+        // Arrow keys: extend selection by one step (or to line edge when shifted).
+        case KC_LEFT:
+            if (SHIFTED) send_string(b->line_home_jump);
+            else         SEND_STRING(SS_LSFT(SS_TAP(X_LEFT)));
+            return false;
+        case KC_RIGHT:
+            if (SHIFTED) send_string(b->line_end_jump);
+            else         SEND_STRING(SS_LSFT(SS_TAP(X_RIGHT)));
+            return false;
+        case KC_DOWN:
+            if (SHIFTED) send_string(b->page_down);
+            else         SEND_STRING(SS_LSFT(SS_TAP(X_DOWN)));
+            return false;
+        case KC_UP:
+            if (SHIFTED) send_string(b->page_up);
+            else         SEND_STRING(SS_LSFT(SS_TAP(X_UP)));
+            return false;
+        case Z_FWORD: send_shifted(b->word_forward); return false;
+        case Z_BWORD: send_shifted(b->word_back);    return false;
+        case Z__LSTR: send_shifted(b->line_start);   return false;
+        case Z__LEND: send_shifted(b->line_end);     return false;
+        case Z__PSTR: send_shifted(b->para_start);   return false;
+        case Z__PEND: send_shifted(b->para_end);     return false;
+        case Z__VIMG:
+            if (SHIFTED) UNSHIFT(send_shifted(b->doc_end));
+            else         send_shifted(b->doc_start);
+            return false;
+        // Modify/clipboard actions: do the action, then drop back to INS.
+        case Z_CHNGE:
+            SEND_STRING(SS_TAP(X_BSPC));
+            layer_move(INS);
+            return false;
+        case Z__COPY:
+            send_string(b->copy);
+            // Move cursor left so it doesn't sit at the end of the selection.
+            SEND_STRING(SS_TAP(X_LEFT));
+            layer_move(INS);
+            return false;
+        case Z___CUT:
+            send_string(b->cut);
+            layer_move(INS);
+            return false;
+        case Z_PASTE:
+            send_string(b->paste);
+            layer_move(INS);
+            return false;
+    }
+    // Anything else: drop back to INS (except shift, so the user can still
+    // build up modifiers before triggering a selection action).
+    if (keycode != KC_LEFT_SHIFT && keycode != KC_RIGHT_SHIFT) {
+        layer_move(INS);
+    }
+    return true;
+}
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
@@ -348,266 +512,14 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             }
             return false;
         case TO(GAM):
-            if (record->event.pressed) {
-                PLAY_SONG(song_gaming_mode);
-            }
+            if (record->event.pressed) PLAY_SONG(song_gaming_mode);
             return true;
         case TO(INS):
-            if (record->event.pressed && IS_LAYER_ON(GAM)) {
-                PLAY_SONG(song_regular_mode);
-            }
+            if (record->event.pressed && IS_LAYER_ON(GAM)) PLAY_SONG(song_regular_mode);
             return true;
     }
-    if (IS_LAYER_ON(MOV) && record->event.pressed) {
-        return process_movement_key(keycode);
-    } else if (IS_LAYER_ON(SEL) && record->event.pressed) {
-        return process_selection_key(keycode);
-    }
-    return true;
-}
-
-// Macro for sending an alternative (unshifted) key sequence when shifted.
-#define HJKL_MOVEMENT(shifted)             \
-    {                                      \
-        if (SHIFTED) {                     \
-            UNSHIFT(SEND_STRING(shifted)); \
-            return false;                  \
-        } else {                           \
-            return true;                   \
-        }                                  \
-    }
-
-bool process_movement_key(uint16_t keycode) {
-    if (host_os == OS_MAC) {
-        // Source: https://support.apple.com/en-us/HT201236
-        switch (keycode) {
-            case KC_LEFT:
-                HJKL_MOVEMENT(SS_TAP(X_HOME))
-            case KC_DOWN:
-                HJKL_MOVEMENT(SS_TAP(X_PAGE_DOWN))
-            case KC_UP:
-                HJKL_MOVEMENT(SS_TAP(X_PAGE_UP))
-            case KC_RIGHT:
-                HJKL_MOVEMENT(SS_TAP(X_END))
-            case Z_FWORD:
-                SEND_STRING(SS_LALT(SS_TAP(X_RIGHT)));
-                return false;
-            case Z_BWORD:
-                SEND_STRING(SS_LALT(SS_TAP(X_LEFT)));
-                return false;
-            case Z__LSTR:
-                SEND_STRING(SS_LGUI(SS_TAP(X_LEFT)));
-                return false;
-            case Z__LEND:
-                SEND_STRING(SS_LGUI(SS_TAP(X_RIGHT)));
-                return false;
-            case Z__PSTR:
-                SEND_STRING(SS_LALT(SS_TAP(X_UP)));
-                return false;
-            case Z__PEND:
-                SEND_STRING(SS_LALT(SS_TAP(X_DOWN)));
-                return false;
-            case Z__VIMG:
-                if (SHIFTED) {
-                    // Shifted; go to end of doc
-                    UNSHIFT(SEND_STRING(SS_LCMD(SS_TAP(X_DOWN))));
-                } else {
-                    // Go to start of doc
-                    SEND_STRING(SS_LCMD(SS_TAP(X_UP)));
-                }
-                return false;
-            case Z__VIMO:
-                if (SHIFTED) {
-                    // Shifted; insert on previous line
-                    UNSHIFT(SEND_STRING(SS_LCTL("a") SS_TAP(X_ENTER) SS_TAP(X_UP)));
-                } else {
-                    // Insert on next line
-                    SEND_STRING(SS_LCTL("e") SS_TAP(X_ENTER));
-                }
-                return false;
-            case Z_PASTE:
-                SEND_STRING(SS_LCMD("v"));
-                return false;
-        }
-    } else if (host_os == OS_WIN) {
-        // Source: https://support.microsoft.com/en-gb/office/keyboard-shortcuts-in-word-95ef89dd-7142-4b50-afb2-f762f663ceb2#bkmk_navigatewin
-        switch (keycode) {
-            case KC_LEFT:
-                HJKL_MOVEMENT(SS_LCTL(SS_TAP(X_HOME)));
-            case KC_DOWN:
-                HJKL_MOVEMENT(SS_LCTL(SS_TAP(X_PAGE_DOWN)));
-            case KC_UP:
-                HJKL_MOVEMENT(SS_LCTL(SS_TAP(X_PAGE_UP)));
-            case KC_RIGHT:
-                HJKL_MOVEMENT(SS_LCTL(SS_TAP(X_END)));
-            case Z_FWORD:
-                SEND_STRING(SS_LCTL(SS_TAP(X_RIGHT)));
-                return false;
-            case Z_BWORD:
-                SEND_STRING(SS_LCTL(SS_TAP(X_LEFT)));
-                return false;
-            case Z__LSTR:
-                SEND_STRING(SS_TAP(X_HOME));
-                return false;
-            case Z__LEND:
-                SEND_STRING(SS_TAP(X_END));
-                return false;
-            case Z__PSTR:
-                SEND_STRING(SS_LCTL(SS_TAP(X_UP)));
-                return false;
-            case Z__PEND:
-                SEND_STRING(SS_LCTL(SS_TAP(X_DOWN)));
-                return false;
-            case Z__VIMG:
-                if (SHIFTED) {
-                    // Shifted; go to end of doc
-                    UNSHIFT(SEND_STRING(SS_LCTL(SS_TAP(X_END))));
-                } else {
-                    // Go to start of doc
-                    SEND_STRING(SS_LCTL(SS_TAP(X_HOME)));
-                }
-                return false;
-            case Z__VIMO:
-                if (SHIFTED) {
-                    // Shifted; insert on previous line
-                    UNSHIFT(SEND_STRING(SS_TAP(X_HOME) SS_TAP(X_ENTER) SS_TAP(X_UP)));
-                } else {
-                    // Insert on next line
-                    SEND_STRING(SS_TAP(X_END) SS_TAP(X_ENTER));
-                }
-                return false;
-            case Z_PASTE:
-                SEND_STRING(SS_LCTL("v"));
-                return false;
-        }
-    }
-    return true;
-}
-
-#define HJKL_SELECTION(unshifted, shifted)   \
-    {                                        \
-        if (SHIFTED) {                       \
-            SEND_STRING(shifted);            \
-        } else {                             \
-            SEND_STRING(SS_LSFT(unshifted)); \
-        }                                    \
-        return false;                        \
-    }
-
-bool process_selection_key(uint16_t keycode) {
-    if (host_os == OS_MAC) {
-        switch (keycode) {
-            case KC_LEFT:
-                HJKL_SELECTION(SS_TAP(X_LEFT), SS_TAP(X_HOME))
-            case KC_DOWN:
-                HJKL_SELECTION(SS_TAP(X_DOWN), SS_TAP(X_PAGE_DOWN))
-            case KC_UP:
-                HJKL_SELECTION(SS_TAP(X_UP), SS_TAP(X_PAGE_UP))
-            case KC_RIGHT:
-                HJKL_SELECTION(SS_TAP(X_RIGHT), SS_TAP(X_END))
-            case Z_FWORD:
-                SEND_STRING(SS_LSFT(SS_LALT(SS_TAP(X_RIGHT))));
-                return false;
-            case Z_BWORD:
-                SEND_STRING(SS_LSFT(SS_LALT(SS_TAP(X_LEFT))));
-                return false;
-            case Z__LSTR:
-                SEND_STRING(SS_LSFT(SS_LGUI(SS_TAP(X_LEFT))));
-                return false;
-            case Z__LEND:
-                SEND_STRING(SS_LSFT(SS_LCTL(SS_TAP(X_RIGHT))));
-                return false;
-            case Z__PSTR:
-                SEND_STRING(SS_LSFT(SS_LALT(SS_TAP(X_UP))));
-                return false;
-            case Z__PEND:
-                SEND_STRING(SS_LSFT(SS_LALT(SS_TAP(X_DOWN))));
-                return false;
-            case Z__VIMG:
-                if (SHIFTED) {
-                    // Shifted; go to end of doc
-                    UNSHIFT(SEND_STRING(SS_LSFT(SS_LCMD(SS_TAP(X_DOWN)))));
-                } else {
-                    // Go to start of doc
-                    SEND_STRING(SS_LSFT(SS_LCMD(SS_TAP(X_UP))));
-                }
-                return false;
-            case Z_CHNGE:
-                SEND_STRING(SS_TAP(X_BSPC));
-                layer_move(INS);
-                return false;
-            case Z__COPY:
-                SEND_STRING(SS_LCMD("c") SS_TAP(X_LEFT));
-                layer_move(INS);
-                return false;
-            case Z___CUT:
-                SEND_STRING(SS_LCMD("x"));
-                layer_move(INS);
-                return false;
-            case Z_PASTE:
-                SEND_STRING(SS_LCMD("v"));
-                layer_move(INS);
-                return false;
-        }
-    } else if (host_os == OS_WIN) {
-        switch (keycode) {
-            case KC_LEFT:
-                HJKL_SELECTION(SS_TAP(X_LEFT), SS_LCTL(SS_TAP(X_HOME)))
-            case KC_DOWN:
-                HJKL_SELECTION(SS_TAP(X_DOWN), SS_LCTL(SS_TAP(X_PAGE_DOWN)))
-            case KC_UP:
-                HJKL_SELECTION(SS_TAP(X_UP), SS_LCTL(SS_TAP(X_PAGE_UP)))
-            case KC_RIGHT:
-                HJKL_SELECTION(SS_TAP(X_RIGHT), SS_LCTL(SS_TAP(X_END)))
-            case Z_FWORD:
-                SEND_STRING(SS_LSFT(SS_LCTL(SS_TAP(X_RIGHT))));
-                return false;
-            case Z_BWORD:
-                SEND_STRING(SS_LSFT(SS_LCTL(SS_TAP(X_LEFT))));
-                return false;
-            case Z__LSTR:
-                SEND_STRING(SS_LSFT(SS_TAP(X_HOME)));
-                return false;
-            case Z__LEND:
-                SEND_STRING(SS_LSFT(SS_TAP(X_END)));
-                return false;
-            case Z__PSTR:
-                SEND_STRING(SS_LSFT(SS_LCTL(SS_TAP(X_UP))));
-                return false;
-            case Z__PEND:
-                SEND_STRING(SS_LSFT(SS_LCTL(SS_TAP(X_DOWN))));
-                return false;
-            case Z__VIMG:
-                if (SHIFTED) {
-                    // Shifted; go to end of doc
-                    UNSHIFT(SEND_STRING(SS_LSFT(SS_LCTL(SS_TAP(X_END)))));
-                } else {
-                    // Go to start of doc
-                    SEND_STRING(SS_LSFT(SS_LCTL(SS_TAP(X_HOME))));
-                }
-                return false;
-            case Z_CHNGE:
-                SEND_STRING(SS_TAP(X_BSPC));
-                layer_move(INS);
-                return false;
-            case Z__COPY:
-                SEND_STRING(SS_LCTL("c") SS_TAP(X_LEFT));
-                layer_move(INS);
-                return false;
-            case Z___CUT:
-                SEND_STRING(SS_LCTL("x"));
-                layer_move(INS);
-                return false;
-            case Z_PASTE:
-                SEND_STRING(SS_LCTL("v"));
-                layer_move(INS);
-                return false;
-        }
-    }
-    // Fall-through: anything other than shift, switch back to Insert mode
-    if (keycode != KC_LEFT_SHIFT && keycode != KC_RIGHT_SHIFT) {
-        layer_move(INS);
-    }
-    // Do normal handling of the key.
+    if (!record->event.pressed) return true;
+    if (IS_LAYER_ON(MOV)) return process_movement_key(keycode);
+    if (IS_LAYER_ON(SEL)) return process_selection_key(keycode);
     return true;
 }

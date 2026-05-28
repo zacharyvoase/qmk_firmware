@@ -8,3 +8,5 @@ WEBUSB_ENABLE = yes
 ORYX_ENABLE = yes
 TAP_DANCE_ENABLE = yes
 CAPS_WORD_ENABLE = yes
+
+SRC += supershift.c win_alt_code.c
