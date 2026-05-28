@@ -18,7 +18,6 @@
 
 #pragma once
 
-#define ORYX_CONFIGURATOR
 #define FIRMWARE_VERSION u8"default/latest"
 #define RGB_MATRIX_STARTUP_SPD 60
 #define CAPS_LOCK_STATUS

@@ -1,9 +1,9 @@
 #include "supershift.h"
 
-#include "action.h"
+#include "caps_word.h"
 #include "keycode.h"
 #include "modifiers.h"
-#include "process_caps_word.h"
+#include "quantum.h"
 
 typedef enum { SINGLE_TAP, SINGLE_HOLD, DOUBLE_SINGLE_TAP, OTHER } supershift_state_t;
 
