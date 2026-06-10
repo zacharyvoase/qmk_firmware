@@ -146,3 +146,8 @@ via*.json
 !/keyboards/zsa/**/keymaps/zoolander/**
 !/keyboards/zsa/**/keymaps/janeway
 !/keyboards/zsa/**/keymaps/janeway/**
+# Shared userspace for the custom keymaps above. The bare !/users/ makes the
+# blanket-ignored directory traversable so the zack/ negations can apply.
+!/users/
+!/users/zack
+!/users/zack/**
