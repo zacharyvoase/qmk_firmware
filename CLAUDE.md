@@ -33,12 +33,14 @@ All of these paths are tracked only because `.gitignore` has explicit unignore r
 - **`upstream`** remote points at `git@github.com:zsa/qmk_firmware.git`. **`origin`** is the personal GitHub fork.
 
 Sync workflow (last performed for firmware25):
-1. `git fetch upstream`
+1. `git fetch upstream`, and create the local `firmwareXX` mirror branch from `upstream/firmwareXX` for the record.
 2. `git checkout zoolander`
 3. `git merge upstream/firmwareXX -X theirs -X rename-threshold=90`
 4. Resolve conflicts — **for any conflict not under the custom paths above, take upstream's side**; for custom files, keep ours.
-5. Watch for path renames: ZSA reorganized `keyboards/moonlander/` → `keyboards/zsa/moonlander/` in firmware25. Future renames may need similar `.gitignore` updates.
-6. Commit the merge; do not push to `origin` without explicit ask.
+5. **Verify the `.gitignore` unignore block survived** (the keymap/userspace negations at the bottom) — it's the one file both sides edit, and losing it silently drops the custom code from git.
+6. Watch for path renames: ZSA reorganized `keyboards/moonlander/` → `keyboards/zsa/moonlander/` in firmware25. Future renames may move the keymap dirs and need matching `.gitignore` updates.
+7. **Compile BOTH keymaps** (`reva`/zoolander and voyager/janeway) — this is the acceptance test. QMK API churn is the usual breakage (renamed types, changed callback signatures); a break in `users/zack/` hits both boards at once but only needs fixing once. Also check `modules/zsa/defaults` still provides `ZSA_SAFE_RANGE` — the shared keycode enum anchors on it.
+8. Commit the merge; flash and live-test both boards before pushing, and do not push to `origin` without explicit ask.
 
 ## Building and flashing
 
