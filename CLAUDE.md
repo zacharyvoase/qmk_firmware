@@ -22,7 +22,7 @@ Everything else is vendored upstream and should not be modified except to resolv
 - `config.h` — shared tap-hold timing, flow-tap, caps-word, one-shot settings
 - `rules.mk` — shared feature flags + `SRC`
 
-A keymap opts in with `USER_NAME := zack` in its `rules.mk`, then includes `zack.h` and calls `process_record_zack()` at the end of its `process_record_user()`. **Status: zoolander is wired up; janeway still carries its own (older, Mac-only) copies and is pending migration.**
+A keymap opts in with `USER_NAME := zack` in its `rules.mk`, then includes `zack.h` and calls `process_record_zack()` at the end of its `process_record_user()`. Both keymaps are wired up.
 
 All of these paths are tracked only because `.gitignore` has explicit unignore rules (`!/keyboards/zsa/**/keymaps/zoolander`, `…/janeway`, `!/users/zack`, plus a bare `!/users/` that makes the blanket-ignored directory traversable). If those exceptions are removed, the code silently vanishes from git and from builds.
 
