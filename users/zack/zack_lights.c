@@ -58,13 +58,6 @@ static void meta_set_led(uint8_t led, uint16_t kc, uint32_t t) {
         case HSV_0_255_255:   rgb_matrix_set_color(led, 255, 0, 0);   break;
         case HSV_74_255_255:  rgb_matrix_set_color(led, 120, 255, 0); break;
         case HSV_169_255_255: rgb_matrix_set_color(led, 0, 60, 255);  break;
-        // --- Utility actions ---
-        case Z__MCTL:           // Mission Control / Task View — solid purple
-            rgb_matrix_set_color(led, 140, 0, 200);
-            break;
-        case Z__LOCK:           // Lock screen — solid amber
-            rgb_matrix_set_color(led, 255, 140, 0);
-            break;
         // --- Tap dances ---
         case TD(TD_DEBUG_TOG): {
             // State-reflective: pulse bright green when debug ON, dim solid when OFF.
@@ -85,6 +78,10 @@ static void meta_set_led(uint8_t led, uint16_t kc, uint32_t t) {
         case KC_PGUP:
         case KC_END:
             rgb_matrix_set_color(led, 0, 150, 200); // solid cyan
+            break;
+        // --- Exit to BASE (META can be entered sticky via NAV+M) ---
+        case TO(BASE):
+            rgb_matrix_set_color(led, 150, 150, 150); // solid white
             break;
         // --- Dead positions ---
         default:

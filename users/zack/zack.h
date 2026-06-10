@@ -44,6 +44,8 @@ enum zack_keycodes {
     Z__PEND, // paragraph end
     Z__VIMG, // g => start of document / G => end of document (same as Vim)
     Z__VIMO, // o => end-of-line, return / O => start-of-line, return, up (similar to o/O in Vim)
+    Z__HBCK, // history back (Cmd+[ on Mac, Alt+Left on Windows)
+    Z__HFWD, // history forward (Cmd+] on Mac, Alt+Right on Windows)
     // Selection/modification keys
     Z_CHNGE, // Change (deletes selected text, goes back to 'insert' mode)
     Z___CUT, // Cmd-X on mac, Ctrl-X on Windows
@@ -102,6 +104,9 @@ typedef struct {
     // Document-level cursor moves (Vim g / G).
     const char *doc_start;
     const char *doc_end;
+    // History navigation (browser/Finder/editor back & forward).
+    const char *history_back;
+    const char *history_fwd;
     // Vim o / O — open a new line below / above and start typing on it.
     const char *open_below;
     const char *open_above;
@@ -155,6 +160,11 @@ static inline void log_event(uint16_t keycode, keyrecord_t *record) {
 // Call at the END of the board's process_record_user (after board-specific
 // cases) and return its result.
 bool process_record_zack(uint16_t keycode, keyrecord_t *record);
+
+// SEL's shift-wrapped movement on its own, for board layers that want
+// selection-extension without the clipboard/auto-exit semantics (zoolander's
+// momentary quick-select). Press events only; returns false when consumed.
+bool zack_process_selection_movement(uint16_t keycode);
 
 // ---------------------------------------------------------------------------
 // Indicator painting.

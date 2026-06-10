@@ -17,6 +17,8 @@ static const os_bindings_t mac_bindings = {
     .para_end       = SS_LALT(SS_TAP(X_DOWN)),
     .doc_start      = SS_LCMD(SS_TAP(X_UP)),
     .doc_end        = SS_LCMD(SS_TAP(X_DOWN)),
+    .history_back   = SS_LCMD("["),
+    .history_fwd    = SS_LCMD("]"),
     .open_below     = SS_LCTL("e") SS_TAP(X_ENTER),
     .open_above     = SS_LCTL("a") SS_TAP(X_ENTER) SS_TAP(X_UP),
     .cut            = SS_LCMD("x"),
@@ -39,6 +41,8 @@ static const os_bindings_t win_bindings = {
     .para_end       = SS_LCTL(SS_TAP(X_DOWN)),
     .doc_start      = SS_LCTL(SS_TAP(X_HOME)),
     .doc_end        = SS_LCTL(SS_TAP(X_END)),
+    .history_back   = SS_LALT(SS_TAP(X_LEFT)),
+    .history_fwd    = SS_LALT(SS_TAP(X_RIGHT)),
     .open_below     = SS_TAP(X_END) SS_TAP(X_ENTER),
     .open_above     = SS_TAP(X_HOME) SS_TAP(X_ENTER) SS_TAP(X_UP),
     .cut            = SS_LCTL("x"),
@@ -140,14 +144,16 @@ static bool process_movement_key(uint16_t keycode) {
             if (SHIFTED) UNSHIFT(send_string(b->open_above));
             else         send_string(b->open_below);
             return false;
+        case Z__HBCK: send_string(b->history_back); return false;
+        case Z__HFWD: send_string(b->history_fwd);  return false;
         case Z_PASTE: send_string(b->paste); return false;
     }
     return true;
 }
 
-// SEL layer: same semantic actions as NAV, but every cursor move is wrapped
-// in shift so it extends the selection. Some keys also return to BASE afterwards.
-static bool process_selection_key(uint16_t keycode) {
+// Shift-wrapped selection movement, shared by the SEL layer and zoolander's
+// momentary quick-select layer. Returns false when the key was consumed.
+bool zack_process_selection_movement(uint16_t keycode) {
     const os_bindings_t *b = bindings();
     switch (keycode) {
         // Arrow keys: extend selection by one step (or to line edge when shifted).
@@ -177,6 +183,16 @@ static bool process_selection_key(uint16_t keycode) {
             if (SHIFTED) UNSHIFT(send_shifted(b->doc_end));
             else         send_shifted(b->doc_start);
             return false;
+    }
+    return true;
+}
+
+// SEL layer: same semantic actions as NAV, but every cursor move is wrapped
+// in shift so it extends the selection. Some keys also return to BASE afterwards.
+static bool process_selection_key(uint16_t keycode) {
+    if (!zack_process_selection_movement(keycode)) return false;
+    const os_bindings_t *b = bindings();
+    switch (keycode) {
         // Modify/clipboard actions: do the action, then drop back to BASE.
         case Z_CHNGE:
             SEND_STRING(SS_TAP(X_BSPC));

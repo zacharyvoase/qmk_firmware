@@ -4,7 +4,7 @@ Zack's travel board. **Mac-only** — `host_os` never leaves `OS_MAC`; no Window
 
 Bootstrapped from a ZSA Oryx layout (Oryx ID `7megA/eaLGdm`, named "janeway") then hand-evolved away from the Oryx defaults. The Oryx source still lives in `~/Downloads/zsa_voyager_7megA_eaLGdm_janeway_source/` for reference.
 
-> **Migration status:** janeway is NOT yet wired onto `users/zack/` — it carries its own (older, Mac-only) copies of the shared code in `keymap.c`. The planned upgrade: set `USER_NAME := zack`, adopt the shared `Z_*` enum + `process_record_zack()` + painters, and replace the simplified NAV/SEL bindings with the full `os_bindings_t` Vim engine (word/para/line/doc moves, `Z__VIMO`, shift-inverted arrows). Until then, expect naming drift (`Z_VIMG` here vs `Z__VIMG` shared).
+> **Migration status:** janeway is NOT yet wired onto `users/zack/` — it carries its own (older, Mac-only) copies of the shared code in `keymap.c`. The planned upgrade: set `USER_NAME := zack`, adopt the shared `Z_*` enum + `process_record_zack()` + painters, and replace the simplified NAV/SEL bindings with the full `os_bindings_t` Vim engine (word/para/line/doc moves, `Z__VIMO`, `Z__HBCK`/`Z__HFWD` history nav, shift-inverted arrows). Also queued for the same pass, to match decisions already made on zoolander: right inner thumb becomes `LT(SYM, KC_BSPC)` (SYM hold for comfortable left-hand grave; backspace tap unchanged), META moves to the shared `NAV+M` → `TO(META)` gateway with a top-left `TO(BASE)` exit, and Lock/Mission Control move from META to FN (`Z__LOCK` on Q, `Z__MCTL` on the left thumb space; play/pause stays on the right thumb space). Until then, expect naming drift (`Z_VIMG` here vs `Z__VIMG` shared).
 
 ## Files
 

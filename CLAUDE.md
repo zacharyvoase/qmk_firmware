@@ -57,7 +57,8 @@ There's no test suite — verification is "flash it and try the layers."
 
 These hold on both boards; the per-board CLAUDE.mds only document deviations.
 
-- **Layer model is Vim-shaped, identical indices everywhere** (`users/zack/zack.h`): `BASE` (insert), `SYM`, `META` (board meta / RGB), `NAV` (normal / movement), `SEL` (visual / selection), `FN`; boards append extras from `ZACK_LAYER_SAFE_RANGE` (zoolander adds `GAM`). New editing actions belong on NAV or SEL, not BASE.
+- **Layer model is Vim-shaped, identical indices everywhere** (`users/zack/zack.h`): `BASE` (insert), `SYM`, `META` (board meta / RGB), `NAV` (normal / movement), `SEL` (visual / selection), `FN`; boards append extras from `ZACK_LAYER_SAFE_RANGE` (zoolander adds `GAM` and `QSL`). New editing actions belong on NAV or SEL, not BASE.
+- **NAV is the mode gateway**: `NAV+V` → `TO(SEL)` (visual mode), `NAV+M` → `TO(META)` (board meta). Sticky layers exit via `TO(BASE)` on the top-left Esc position.
 - **Custom keycodes use the `Z_*` namespace**, bracketed by sentinels `Z_START` and `Z_END`. The sentinels are load-bearing: indicator code paints everything between them red. Never bind the sentinels, never add real keycodes after `Z_END`. HSV preset keycodes sit deliberately *before* `Z_START` so META can color them itself.
 - **OS-aware bindings live in `os_bindings_t`** (`mac_bindings` / `win_bindings` in `zack.c`). Add new semantic actions as fields there rather than branching on `host_os` inside switch cases. Mac-only boards simply never flip `host_os`.
 - **`UNSHIFT(...)` / `SHIFTED`** (`zack.h`) — test for a held shift, or run a block with shift temporarily cleared and then restored. Use whenever a sent sequence must not be modified by the user's held shift.

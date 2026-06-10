@@ -27,6 +27,7 @@
 // additions below.
 enum zoolander_layers {
     GAM = ZACK_LAYER_SAFE_RANGE, // Gaming (no tap dances/holds, low latency)
+    QSL,                         // Quick-select: SEL movement while held, BASE on release
 };
 
 enum zoolander_tap_dances {
@@ -82,8 +83,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     LT(NAV,KC_TAB), KC_Q,         KC_W,    KC_E,    KC_R,          KC_T,       KC_LBRC, KC_RBRC, KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,            KC_BSPC,
     LCTL_T(KC_ESC), KC_A,         KC_S,    KC_D,    LT(FN,KC_F),   KC_G,       KC_LPRN, KC_RPRN, KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN,         LCTL_T(KC_ENT),
     KC_LSFT,        LALT_T(KC_Z), KC_X,    KC_C,    KC_V,          KC_B,                         KC_N,    KC_M,    KC_COMM, KC_DOT,  RALT_T(KC_SLSH), RSFT_T(KC_MINS),
-    KC_GRV,         KC_LCTL,      KC_LALT, XXXXXXX, KC_LGUI,       TD(TD_AIRPODS),               TO(GAM), KC_RGUI, XXXXXXX, KC_RALT, KC_RCTL,         KC_QUOT,
-    KC_SPC,         OSL(SYM),     MO(META),                                                                  MO(META), LT(META,KC_BSPC), KC_SPC
+    KC_GRV,         KC_LCTL,      KC_LALT, MO(QSL), KC_LGUI,       TD(TD_AIRPODS),               TO(GAM), KC_RGUI, XXXXXXX, KC_RALT, KC_RCTL,         KC_QUOT,
+    KC_SPC,         OSL(SYM),     MO(META),                                                                  MO(META), LT(SYM,KC_BSPC), KC_SPC
     ),
 
     [GAM] = LAYOUT_moonlander(
@@ -91,7 +92,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     KC_TAB,  _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
     KC_LCTL, _______, _______, _______, KC_F,    _______, _______, _______, _______, _______, _______, _______, _______, KC_ENT,
     KC_LSFT, KC_Z,    _______, _______, _______, _______,                           _______, _______, _______, _______, KC_SLSH, _______,
-    _______, _______, _______, _______, _______, _______,                           TO(BASE), _______, _______, _______, _______, _______,
+    _______, _______, _______, XXXXXXX, _______, _______,                           TO(BASE), _______, _______, _______, _______, _______,
     _______, _______, _______,                                                                  _______, KC_BSPC, _______
     ),
 
@@ -106,18 +107,18 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     [FN] = LAYOUT_moonlander(
     QK_BOOT, KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   _______, _______, KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,
-    _______, KC_F11,  KC_F12,  KC_F13,  KC_F14,  KC_F15,  _______, _______, _______, _______, _______, _______, _______, _______,
+    _______, Z__LOCK, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
     Z_OSWIN, _______, _______, _______, _______, _______, _______, _______, KC_MPRV, KC_VOLD, KC_VOLU, KC_MNXT, _______, _______,
     _______, _______, _______, _______, _______, _______,                           _______, KC_MUTE, _______, _______, _______, _______,
     _______, _______, _______, _______, Z_OSMAC, _______,                           QK_RBT,  _______, _______, _______, _______, _______,
-    KC_MPLY, _______, _______,                                                                  _______, _______, KC_MPLY
+    Z__MCTL, _______, _______,                                                                  _______, _______, KC_MPLY
     ),
 
     [NAV] = LAYOUT_moonlander(
     XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
     _______, XXXXXXX, Z_FWORD, Z__LEND, XXXXXXX, XXXXXXX, Z__PSTR, Z__PEND, XXXXXXX, XXXXXXX, XXXXXXX, Z__VIMO, Z_PASTE, XXXXXXX,
-    XXXXXXX, Z__LSTR, XXXXXXX, XXXXXXX, XXXXXXX, Z__VIMG, XXXXXXX, XXXXXXX, KC_LEFT, KC_DOWN, KC_UP,   KC_RGHT, XXXXXXX, XXXXXXX,
-    KC_LSFT, XXXXXXX, KC_DEL,  XXXXXXX, TO(SEL), Z_BWORD,                           XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, KC_RSFT,
+    XXXXXXX, Z__LSTR, XXXXXXX, XXXXXXX, XXXXXXX, Z__VIMG, Z__HBCK, Z__HFWD, KC_LEFT, KC_DOWN, KC_UP,   KC_RGHT, XXXXXXX, XXXXXXX,
+    KC_LSFT, XXXXXXX, KC_DEL,  XXXXXXX, TO(SEL), Z_BWORD,                           XXXXXXX, TO(META), XXXXXXX, XXXXXXX, XXXXXXX, KC_RSFT,
     XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,                           XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
     XXXXXXX, XXXXXXX, XXXXXXX,                                                                  XXXXXXX, XXXXXXX, XXXXXXX
     ),
@@ -132,12 +133,25 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     ),
 
     [META] = LAYOUT_moonlander(
-    XXXXXXX,          XXXXXXX,      XXXXXXX, XXXXXXX,       RGB_VAD,        RGB_VAI,         XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
-    XXXXXXX,          Z__LOCK,      RGB_HUD, RGB_HUI,       RGB_SAD,        RGB_SAI,         XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+    TO(BASE),         XXXXXXX,      XXXXXXX, XXXXXXX,       RGB_VAD,        RGB_VAI,         XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+    XXXXXXX,          XXXXXXX,      RGB_HUD, RGB_HUI,       RGB_SAD,        RGB_SAI,         XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
     TD(TD_DEBUG_TOG), XXXXXXX,      RGB_SPD, RGB_SPI,       RGB_RMOD,       RGB_MOD,         XXXXXXX, XXXXXXX, KC_HOME, KC_PGDN, KC_PGUP, KC_END,  XXXXXXX, XXXXXXX,
     XXXXXXX,          TD(TD_EECLR), RGB_TOG, HSV_0_255_255, HSV_74_255_255, HSV_169_255_255,                   XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
     XXXXXXX,          XXXXXXX,      XXXXXXX, XXXXXXX,       XXXXXXX,        XXXXXXX,                           XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
-    Z__MCTL,          XXXXXXX,      XXXXXXX,                                                                            XXXXXXX, XXXXXXX, XXXXXXX
+    XXXXXXX,          XXXXXXX,      XXXXXXX,                                                                            XXXXXXX, XXXXXXX, XXXXXXX
+    ),
+
+    // Quick-select: held momentarily from BASE (left middle finger, bottom
+    // row, between LALT and LGUI). Same shift-wrapped movement as SEL, but no
+    // clipboard actions and no sticky state — releasing the key drops
+    // straight back to BASE.
+    [QSL] = LAYOUT_moonlander(
+    XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+    XXXXXXX, XXXXXXX, Z_FWORD, Z__LEND, XXXXXXX, XXXXXXX, Z__PSTR, Z__PEND, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+    XXXXXXX, Z__LSTR, XXXXXXX, XXXXXXX, XXXXXXX, Z__VIMG, XXXXXXX, XXXXXXX, KC_LEFT, KC_DOWN, KC_UP,   KC_RGHT, XXXXXXX, XXXXXXX,
+    KC_LSFT, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, Z_BWORD,                           XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, KC_RSFT,
+    XXXXXXX, XXXXXXX, XXXXXXX, _______, XXXXXXX, XXXXXXX,                           XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+    XXXXXXX, XXXXXXX, XXXXXXX,                                                                  XXXXXXX, XXXXXXX, XXXXXXX
     ),
 };
 // clang-format on
@@ -164,10 +178,13 @@ void caps_word_set_user(bool active) {
 // ============================================================================
 // Tap-hold per-key behavior (scheme shared with janeway; lists are per-board)
 // ============================================================================
-// Pinky mods snap-fire on other-key press (HOLD_ON_OTHER_KEY_PRESS) — they
-// need fast modifier feel and aren't at risk of misfiring during typing
-// rolls: you don't roll INTO a pinky-mod position mid-word. Everything else —
-// letter mods, layer-taps — returns false here and uses PERMISSIVE_HOLD
+// Pinky mods and the NAV gateway snap-fire on other-key press
+// (HOLD_ON_OTHER_KEY_PRESS) — they need fast feel and aren't at risk of
+// misfiring during typing rolls: you don't roll INTO a pinky position
+// mid-word. Tab in particular drives hold+movement-key chords where the
+// movement key may still be held when Tab releases, which permissive hold
+// would misread as a tap. Everything else — letter mods, the F and
+// backspace layer-taps — returns false here and uses PERMISSIVE_HOLD
 // (below), so typing rolls like "mo" or "ve" settle as TAP. (Cmd/Alt/Ctrl on
 // the bottom row are plain modifiers and never enter tap-hold resolution.)
 bool get_hold_on_other_key_press(uint16_t keycode, keyrecord_t *record) {
@@ -175,6 +192,7 @@ bool get_hold_on_other_key_press(uint16_t keycode, keyrecord_t *record) {
         case LCTL_T(KC_ESC):
         case LCTL_T(KC_ENT):
         case RSFT_T(KC_MINS):
+        case LT(NAV, KC_TAB):
             return true;
     }
     return false;
@@ -189,6 +207,7 @@ bool get_permissive_hold(uint16_t keycode, keyrecord_t *record) {
         case LCTL_T(KC_ESC):
         case LCTL_T(KC_ENT):
         case RSFT_T(KC_MINS):
+        case LT(NAV, KC_TAB):
             return false;
     }
     return true;
@@ -299,6 +318,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case TO(BASE):
             if (record->event.pressed && IS_LAYER_ON(GAM)) PLAY_SONG(song_regular_mode);
             return true;
+    }
+    // Quick-select: SEL's shift-wrapped movement while the QSL key is held;
+    // everything else (shift, KC_NO) passes through untouched.
+    if (IS_LAYER_ON(QSL) && record->event.pressed) {
+        return zack_process_selection_movement(keycode);
     }
     return process_record_zack(keycode, record);
 }
