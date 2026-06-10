@@ -1,0 +1,6 @@
+{
+    "modules": [
+        "zsa/defaults",
+        "zsa/navigator_trackpad"
+    ]
+}

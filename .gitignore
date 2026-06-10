@@ -144,3 +144,5 @@ via*.json
 !/keyboards/zsa/**/keymaps/oryx/**
 !/keyboards/zsa/**/keymaps/zoolander
 !/keyboards/zsa/**/keymaps/zoolander/**
+!/keyboards/zsa/**/keymaps/janeway
+!/keyboards/zsa/**/keymaps/janeway/**

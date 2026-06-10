@@ -1,0 +1,7 @@
+{
+  "C_Cpp.intelliSenseEngine": "disabled",
+  "clangd.arguments": [
+    "--header-insertion=never",
+    "--background-index"
+  ]
+}
